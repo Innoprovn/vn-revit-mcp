@@ -7,7 +7,7 @@
   Trong zip:
     addin\          add-in + CommandSet đi kèm
     server\         vn-revit-mcp.exe (framework-dependent, cần .NET 8 có sẵn cùng Revit 2025+)
-    install.ps1, uninstall.ps1, Cai-dat.cmd, HUONG-DAN.txt, version.txt
+    Install-VnRevitMcp.ps1, uninstall.ps1, Cai-dat.cmd, HUONG-DAN.txt, version.txt
 #>
 param([switch]$SkipBuild)
 
@@ -29,7 +29,7 @@ New-Item -ItemType Directory -Force (Join-Path $stage "addin"), (Join-Path $stag
 Copy-Item (Join-Path $artifacts "addin\InnoPro.VnRevitMcp\*") (Join-Path $stage "addin") -Recurse
 Copy-Item (Join-Path $artifacts "server\*") (Join-Path $stage "server") -Recurse
 Get-ChildItem $stage -Recurse -Filter *.pdb | Remove-Item -Force
-Copy-Item (Join-Path $root "install.ps1"), (Join-Path $root "uninstall.ps1") $stage
+Copy-Item (Join-Path $root "Install-VnRevitMcp.ps1"), (Join-Path $root "uninstall.ps1") $stage
 
 $ascii = New-Object Text.UTF8Encoding($false)
 $utf8Bom = New-Object Text.UTF8Encoding($true)
@@ -38,7 +38,7 @@ $utf8Bom = New-Object Text.UTF8Encoding($true)
 # Cai-dat.cmd chỉ dùng ký tự ASCII để cmd đọc đúng. "%~dp0." tránh dấu \ cuối làm hỏng dấu ngoặc kép.
 $cmd = @"
 @echo off
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1" -Source "%~dp0."
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install-VnRevitMcp.ps1" -Source "%~dp0."
 echo.
 pause
 "@

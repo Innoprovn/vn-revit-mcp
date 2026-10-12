@@ -22,7 +22,7 @@ $artifacts = Join-Path $root "artifacts"
 if (-not $SkipBuild) { & (Join-Path $PSScriptRoot "build.ps1") }
 
 # host.hash: dev-reload.ps1 so sánh để biết phần lõi (Addin/Sdk/Bridge) có đổi so với bản đã cài không.
-# Ghi vào bản build, install.ps1 chép theo sang app\dev\addin\host.hash.
+# Ghi vào bản build, Install-VnRevitMcp.ps1 chép theo sang app\dev\addin\host.hash.
 . (Join-Path $PSScriptRoot "HostHash.ps1")
 $staged = Join-Path $artifacts "addin\InnoPro.VnRevitMcp"
 Set-Content (Join-Path $staged "host.hash") (Get-HostSourceHash $root) -Encoding ASCII
@@ -33,9 +33,9 @@ Set-Content (Join-Path $staged "host.hash") (Get-HostSourceHash $root) -Encoding
 $installArgs = @("-Source", $artifacts, "-Version", "dev")
 if ($NoClients) { $installArgs += "-NoClients" }
 if (Test-InPackage) {
-    Invoke-OutsidePackage (Join-Path $root "install.ps1") $installArgs
+    Invoke-OutsidePackage (Join-Path $root "Install-VnRevitMcp.ps1") $installArgs
     return
 }
 
-& (Join-Path $root "install.ps1") @installArgs
+& (Join-Path $root "Install-VnRevitMcp.ps1") @installArgs
 if ($LASTEXITCODE) { throw "Cài đặt thất bại." }
