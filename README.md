@@ -37,7 +37,7 @@ Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md
 AI client khác: khai báo MCP server kiểu **stdio**, command `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe`.
 Mở nhiều Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
 
-## Có những gì (83 lệnh)
+## Có những gì (84 lệnh)
 
 | Nhóm | Ví dụ |
 |---|---|
