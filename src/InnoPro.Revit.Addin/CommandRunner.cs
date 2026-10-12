@@ -24,9 +24,7 @@ internal static class CommandRunner
         if (command.TransactionMode == Sdk.TransactionMode.Auto)
         {
             using var transaction = new Transaction(context.Document, $"InnoPro: {command.Name}");
-            var options = transaction.GetFailureHandlingOptions();
-            options.SetFailuresPreprocessor(new SilentWarnings());
-            transaction.SetFailureHandlingOptions(options);
+            TransactionHelper.SuppressWarnings(transaction);
 
             transaction.Start();
             try
@@ -48,21 +46,5 @@ internal static class CommandRunner
         }
 
         return JsonSerializer.Serialize(result, BridgeProtocol.Json);
-    }
-
-    /// <summary>Bỏ qua cảnh báo (không bật hộp thoại chặn Revit); lỗi thật thì hủy Transaction.</summary>
-    private sealed class SilentWarnings : IFailuresPreprocessor
-    {
-        public FailureProcessingResult PreprocessFailures(FailuresAccessor failures)
-        {
-            foreach (var message in failures.GetFailureMessages())
-            {
-                if (message.GetSeverity() == FailureSeverity.Warning)
-                    failures.DeleteWarning(message);
-                else
-                    return FailureProcessingResult.ProceedWithRollBack;
-            }
-            return FailureProcessingResult.Continue;
-        }
     }
 }

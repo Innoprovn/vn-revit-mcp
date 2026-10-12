@@ -19,15 +19,22 @@ if ($LASTEXITCODE -ne 0) { throw "Build thất bại." }
 
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 $addin = Join-Path $out "addin\InnoPro.VnRevitMcp"
-$core = Join-Path $addin "Commands\Core"
-New-Item -ItemType Directory -Force $addin, $core | Out-Null
+New-Item -ItemType Directory -Force $addin | Out-Null
 
 $addinBin = Join-Path $root "src\InnoPro.Revit.Addin\bin\$Configuration\net8.0-windows"
 Copy-Item (Join-Path $addinBin "InnoPro.*.dll"), (Join-Path $addinBin "InnoPro.*.pdb") $addin
 Copy-Item (Join-Path $addinBin "InnoPro.VnRevitMcp.addin") (Join-Path $out "addin")
 
-$coreBin = Join-Path $root "src\InnoPro.Revit.Commands.Core\bin\$Configuration\net8.0-windows"
-Copy-Item (Join-Path $coreBin "InnoPro.Revit.Commands.Core.*"), (Join-Path $coreBin "commandset.json") $core
+# Mỗi project có commandset.json là một CommandSet: chép cả thư mục output vào Commands\<name>.
+foreach ($manifest in Get-ChildItem (Join-Path $root "src") -Recurse -Filter commandset.json | Where-Object { $_.FullName -match '\\bin\\' -and $_.FullName -match "\\$Configuration\\" }) {
+    $name = (Get-Content $manifest.FullName -Raw -Encoding UTF8 | ConvertFrom-Json).name
+    $target = Join-Path $addin "Commands\$name"
+    New-Item -ItemType Directory -Force $target | Out-Null
+    Copy-Item (Join-Path $manifest.DirectoryName "*") $target -Recurse
+    # SDK do host cung cấp, không để bản sao trong CommandSet.
+    Remove-Item (Join-Path $target "InnoPro.Revit.Sdk.*") -ErrorAction SilentlyContinue
+    Write-Host "CommandSet $name"
+}
 
 dotnet publish (Join-Path $root "src\InnoPro.Mcp.Server\InnoPro.Mcp.Server.csproj") -c $Configuration -r win-x64 --self-contained false -o (Join-Path $out "server")
 if ($LASTEXITCODE -ne 0) { throw "Publish MCP server thất bại." }

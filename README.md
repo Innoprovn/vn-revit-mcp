@@ -44,8 +44,12 @@ Chi tiết: [docs/kien-truc.md](docs/kien-truc.md).
 | `get_selected_elements` | Phần tử đang chọn |
 | `get_element_parameters` | Tham số của một phần tử |
 | `list_levels` | Danh sách tầng và cao độ (mm) |
+| `list_views` | Danh sách view, lọc theo loại và tên |
+| `list_sheets` | Danh sách sheet và view đặt trên sheet |
+| `find_elements` | Tìm phần tử theo category, tầng, view, giá trị tham số |
 | `analyze_model_statistics` | Thống kê phần tử theo category |
 | `select_elements` | Chọn và zoom tới phần tử theo id |
+| `set_parameters` | Sửa một tham số trên nhiều phần tử (Undo được) |
 
 ## Cài đặt cho nhà phát triển
 
