@@ -26,7 +26,9 @@ Xong: mở Revit, tab **InnoPro**. Dùng theo một trong hai cách:
 
 | Việc | Lệnh |
 |---|---|
-| Xem AI client nào đã kết nối | `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" clients` |
+Hướng dẫn chi tiết cho người dùng: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md).
+
+| Xem AI client nào đã kết nối (hoặc bấm nút **Kết nối AI** trong Revit) | `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" clients` |
 | Kết nối lại (sau khi cài thêm AI client) | `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" setup` |
 | Cập nhật lên bản mới | chạy lại lệnh cài một dòng |
 | Gỡ cài đặt | `uninstall.ps1` trong file zip (thêm `-Purge` để xóa cả lệnh tự thêm) |
