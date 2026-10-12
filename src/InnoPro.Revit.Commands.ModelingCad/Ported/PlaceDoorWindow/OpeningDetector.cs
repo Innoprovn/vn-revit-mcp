@@ -1,11 +1,10 @@
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.DB;
 
 namespace InnoPro.Revit.Commands.ModelingCad.PlaceDoorWindow;
 
 /// <summary>Nhận diện từng vị trí cửa đi/cửa sổ từ layer CAD người dùng chọn, khớp luôn với tường
 /// THẬT gần nhất trong model (khác WallFromCad: ở đây tường đã có sẵn trong model, không phải tự
-/// dựng từ CAD — xem WallHostFinder), và đọc tên gần nhất từ Text Note THẬT trong Revit (xem
-/// TextTagReader — không đọc được text CAD thô, phải explode trước).
+/// dựng từ CAD — xem WallHostFinder), và gán tên bằng Common.TagMatcher (chữ đọc thẳng từ file CAD và Text Note).
 ///
 /// Đo bề rộng/phương lỗ mở dùng lại ĐÚNG thuật toán đã kiểm chứng ở WallFromCad\WallPairing.BuildDoorLines
 /// (2 project là 2 assembly tách biệt trong kiến trúc hot-reload nên phải chép lại, không tham chiếu
@@ -31,37 +30,40 @@ internal static class OpeningDetector
 
     public static List<OpeningInstance> Detect(
         IReadOnlyList<RawSegment> segments, IReadOnlyList<RawArc> arcs, IReadOnlyList<Wall> walls,
-        IReadOnlyList<TextNote> textNotes, double textSearchRadiusFeet)
+        IReadOnlyList<Common.TextTag> tags, double expandFeet)
     {
-        var candidates = BuildCandidates(segments, arcs);
-        var instances = new List<OpeningInstance>();
-
-        foreach (var group in candidates)
+        var chosenAll = new List<(DetectedOpening Candidate, HostWallMatch? Host)>();
+        foreach (var group in BuildCandidates(segments, arcs))
         {
             var resolved = group
                 .Select(candidate => (Candidate: candidate, Host: WallHostFinder.FindHost(candidate, walls)))
                 .ToList();
-
             var withHost = resolved.Where(r => r.Host is not null).ToList();
-            var chosen = withHost.Count > 0 ? withHost : resolved.Take(1).ToList();
-
-            foreach (var (candidate, host) in chosen)
-            {
-                var widthMm = Math.Round(
-                    UnitUtils.ConvertFromInternalUnits(candidate.LengthFeet, UnitTypeId.Millimeters),
-                    MidpointRounding.AwayFromZero);
-
-                instances.Add(new OpeningInstance
-                {
-                    Opening = candidate,
-                    WidthMm = widthMm,
-                    Host = host,
-                    TagName = TextTagReader.FindNearestTagName(candidate.Center, textNotes, textSearchRadiusFeet)
-                });
-            }
+            chosenAll.AddRange(withHost.Count > 0 ? withHost : resolved.Take(1));
         }
 
-        return instances;
+        // Ký hiệu cửa có thể sinh thêm ứng viên không host (nét cánh mở, cụm tách rời); bỏ ứng viên không host
+        // nằm chồng lên một lỗ mở đã khớp tường.
+        var hosted = chosenAll.Where(x => x.Host != null).ToList();
+        chosenAll.RemoveAll(x => x.Host == null && hosted.Any(h =>
+            h.Candidate.Center.DistanceTo(x.Candidate.Center) <= Math.Max(h.Candidate.LengthFeet, x.Candidate.LengthFeet)));
+
+        // Tên cửa: vùng chữ nhật dọc theo lỗ mở (theo hướng tường), leader chỉ vào lỗ là chắc chắn;
+        // bỏ chữ kích thước "2000x2700" thường đặt sát tên.
+        var names = tags.Where(t => !TextTagReader.IsDimension(t.Text)).ToList();
+        var assigned = Common.TagMatcher.Assign(chosenAll, names, (item, tag) =>
+        {
+            var halfAcross = item.Host?.Wall.Width / 2 ?? UnitUtils.ConvertToInternalUnits(150.0, UnitTypeId.Millimeters);
+            return Common.TagMatcher.Point(tag, item.Candidate.Center, item.Candidate.Direction, item.Candidate.LengthFeet / 2, halfAcross, expandFeet);
+        });
+
+        return chosenAll.Select((item, i) => new OpeningInstance
+        {
+            Opening = item.Candidate,
+            WidthMm = Math.Round(UnitUtils.ConvertFromInternalUnits(item.Candidate.LengthFeet, UnitTypeId.Millimeters), MidpointRounding.AwayFromZero),
+            Host = item.Host,
+            TagName = assigned.TryGetValue(i, out var tag) ? tag.Text : null,
+        }).ToList();
     }
 
     /// <summary>Trả về danh sách NHÓM candidate — mỗi nhóm là 1-2 candidate cùng xuất phát từ 1 cung/1

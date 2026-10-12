@@ -16,8 +16,9 @@ internal static class StructureHelper
             .Where(l => l.Elevation > level.Elevation + 1e-6).OrderBy(l => l.Elevation).FirstOrDefault()
         ?? throw new CommandException($"Không có tầng nào phía trên '{level.Name}'. Truyền top_level.");
 
-    public static List<TextNote> TextNotes(Document doc, View view) =>
-        new FilteredElementCollector(doc, view.Id).OfClass(typeof(TextNote)).Cast<TextNote>().ToList();
+    /// <summary>Chữ làm tag: đọc thẳng file CAD + Text Note trong view; text_layers lọc layer chữ trong CAD.</summary>
+    public static List<TextTag> Tags(Document doc, ImportInstance cad, View view, JsonElement args, out string status) =>
+        CadText.Collect(doc, cad, view, out status, Args.GetStringsOrEmpty(args, "text_layers").ToList());
 }
 
 public sealed class PlaceColumnsFromCad : RevitCommandBase
@@ -113,7 +114,7 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
     public override RibbonButton? Ribbon => new("Dầm CAD", "beam");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
-        "Đặt dầm kết cấu từ cặp nét song song trên layer CAD; tên và b×h đọc từ Text Note gần dầm (ví dụ D1(220x600)).";
+        "Đặt dầm kết cấu từ cặp nét song song trên layer CAD; tên và b×h đọc thẳng từ chữ CAD dọc dầm hoặc leader chỉ vào (ví dụ D1(220x600)); chia nhịp tại Grid và cột.";
     public override string InputSchema => """
         {
           "type": "object",
@@ -126,7 +127,8 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
             "include_untagged": { "type": "boolean", "description": "Đặt cả dầm không đọc được tên. Mặc định false." },
             "extend_to_columns": { "type": "boolean", "description": "Kéo dầm tới cột. Mặc định true." },
             "tag_parameter": { "type": "string", "description": "Tham số text để ghi tên dầm." },
-            "text_search_mm": { "type": "number", "description": "Bán kính tìm Text, mặc định 1000." },
+            "text_search_mm": { "type": "number", "description": "Vùng tìm tên hai bên dầm, mặc định 1000." },
+            "text_layers": { "type": "array", "items": { "type": "string" }, "description": "Layer chữ tên cấu kiện trong CAD; mặc định mọi layer." },
             "dry_run": { "type": "boolean", "description": "Chỉ phân tích." }
           }
         }
@@ -148,8 +150,10 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
         var scan = Beam.CadBeamScanner.Scan(doc, cad, view);
         foreach (var (beam, layerName) in Beam.BeamOrphanRepairer.Repair(scan.RawSegmentsByLayer, scan.Orphans))
             if (scan.BeamsByLayer.TryGetValue(layerName, out var list)) list.Add(beam);
-        Beam.BeamTagReader.AttachTags(scan.BeamsByLayer.Values.SelectMany(l => l), StructureHelper.TextNotes(doc, view),
-            ArgsX.Mm(arguments, "text_search_mm", Beam.BeamTagReader.DefaultSearchExpandMm));
+        var tags = StructureHelper.Tags(doc, cad, view, arguments, out var tagSource);
+        var tagged = SizeTags.Attach(scan.BeamsByLayer.Values.SelectMany(l => l).ToList(), b => (b.Start, b.End, b.WidthFeet),
+            (b, name, bMm, hMm) => { b.TagName = name; b.TagBMm = bMm; b.TagHMm = hMm; },
+            tags, ArgsX.Mm(arguments, "text_search_mm", SizeTags.DefaultSearchExpandMm));
 
         var layers = Cad.Layers(arguments, scan.BeamsByLayer.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key));
         var beams = layers.SelectMany(l => scan.BeamsByLayer[l]).ToList();
@@ -186,7 +190,16 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
         }));
 
         if (Args.GetBoolOrDefault(arguments, "dry_run", false))
-            return new { cad_id = cad.Id.Value, beams = beams.Count, extended_to_columns = extended, groups = Groups() };
+            return new
+            {
+                cad_id = cad.Id.Value, beams = beams.Count, tagged, tag_source = tagSource, extended_to_columns = extended, groups = Groups(),
+                detail = Table.Of(beams.Select(b => new
+                {
+                    name = b.TagName, b_mm = Math.Round(UnitConvert.FeetToMm(b.WidthFeet)), tag_h_mm = b.TagHMm,
+                    x1 = Math.Round(UnitConvert.FeetToMm(b.Start.X)), y1 = Math.Round(UnitConvert.FeetToMm(b.Start.Y)),
+                    x2 = Math.Round(UnitConvert.FeetToMm(b.End.X)), y2 = Math.Round(UnitConvert.FeetToMm(b.End.Y)),
+                }), 200),
+            };
 
         var typeErrors = new List<string>();
         // Tự tạo type thiếu khi biết đủ b x h (đọc từ Text); family lấy theo beam_family hoặc family đầu tiên có b, h.
@@ -227,6 +240,8 @@ public sealed class PlaceStructuralWallsFromCad : RevitCommandBase
             "template_wall_type": { "type": "string", "description": "Wall Type mẫu để tạo type thiếu." },
             "type_map": { "type": "object", "description": "Tên vách hoặc bề dày → Wall Type." },
             "include_untagged": { "type": "boolean", "description": "Đặt cả vách không có tên. Mặc định true." },
+            "text_search_mm": { "type": "number", "description": "Vùng tìm tên quanh vách, mặc định 1000." },
+            "text_layers": { "type": "array", "items": { "type": "string" }, "description": "Layer chữ tên cấu kiện trong CAD; mặc định mọi layer." },
             "require_support": { "type": "boolean", "description": "Chỉ đặt vách có tường/móng đỡ bên dưới. Mặc định false." },
             "tag_parameter": { "type": "string", "description": "Tham số text để ghi tên vách." },
             "dry_run": { "type": "boolean", "description": "Chỉ phân tích." }
@@ -254,8 +269,10 @@ public sealed class PlaceStructuralWallsFromCad : RevitCommandBase
         var scan = SWall.CadWallScanner.Scan(doc, cad, view, 0.0, minPairLengthRatio);
         foreach (var (wall, layerName) in SWall.WallOrphanRepairer.Repair(scan.RawSegmentsByLayer, scan.Orphans, minPairLengthRatio))
             if (scan.WallsByLayer.TryGetValue(layerName, out var list)) list.Add(wall);
-        SWall.WallTagReader.AttachTags(scan.WallsByLayer.Values.SelectMany(l => l), StructureHelper.TextNotes(doc, view),
-            UnitConvert.MmToFeet(SWall.WallTagReader.DefaultSearchExpandMm));
+        var tags = StructureHelper.Tags(doc, cad, view, arguments, out var tagSource);
+        var tagged = SizeTags.Attach(scan.WallsByLayer.Values.SelectMany(l => l).ToList(), w => (w.Start, w.End, w.WidthFeet),
+            (w, name, bMm, hMm) => { w.TagName = name; w.TagBMm = bMm; w.TagHMm = hMm; },
+            tags, ArgsX.Mm(arguments, "text_search_mm", SizeTags.DefaultSearchExpandMm));
 
         var layers = Cad.Layers(arguments, scan.WallsByLayer.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key));
         var walls = layers.SelectMany(l => scan.WallsByLayer[l]).ToList();
@@ -291,7 +308,7 @@ public sealed class PlaceStructuralWallsFromCad : RevitCommandBase
         }));
 
         if (Args.GetBoolOrDefault(arguments, "dry_run", false))
-            return new { cad_id = cad.Id.Value, walls = walls.Count, unsupported, groups = Groups() };
+            return new { cad_id = cad.Id.Value, walls = walls.Count, tagged, tag_source = tagSource, unsupported, groups = Groups() };
 
         var typeErrors = new List<string>();
         if (Args.GetStringOrDefault(arguments, "template_wall_type") is { Length: > 0 } templateName)

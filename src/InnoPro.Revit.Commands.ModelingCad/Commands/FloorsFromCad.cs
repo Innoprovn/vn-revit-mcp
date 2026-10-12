@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Autodesk.Revit.DB;
 using InnoPro.Revit.Commands.ModelingCad.Common;
 using InnoPro.Revit.Commands.ModelingCad.FloorFromCad;
@@ -13,7 +13,7 @@ public sealed class CreateFloorsFromCad : RevitCommandBase
     public override RibbonButton? Ribbon => new("Sàn/trần CAD", "floor");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
-        "Vẽ sàn hoặc trần theo vùng hatch trên layer CAD. Tên vùng đọc từ Text Note nằm trong hatch để chọn type.";
+        "Vẽ sàn hoặc trần theo vùng hatch trên layer CAD. Tên vùng là chữ CAD (hoặc Text Note) nằm trong hatch hay có leader chỉ vào.";
     public override string InputSchema => """
         {
           "type": "object",
@@ -29,6 +29,7 @@ public sealed class CreateFloorsFromCad : RevitCommandBase
             "offset_mm": { "type": "number", "description": "Cao độ so với tầng." },
             "offsets": { "type": "object", "description": "Tên vùng → cao độ mm." },
             "edge_offset_mm": { "type": "number", "description": "Lùi mép vào trong." },
+            "text_layers": { "type": "array", "items": { "type": "string" }, "description": "Layer chữ tên sàn trong CAD; mặc định mọi layer." },
             "dry_run": { "type": "boolean", "description": "Chỉ phân tích." }
           }
         }
@@ -55,14 +56,14 @@ public sealed class CreateFloorsFromCad : RevitCommandBase
         var regions = layers.SelectMany(l => scan.RegionsByLayer[l]).ToList();
         if (regions.Count == 0) throw new CommandException("Layer đã chọn không có vùng hatch nào.");
 
-        var textNotes = new FilteredElementCollector(doc, view.Id).OfClass(typeof(TextNote)).Cast<TextNote>().ToList();
+        var tags = StructureHelper.Tags(doc, cad, view, arguments, out var tagSource);
         var types = (kind == SurfaceKind.Ceiling
                 ? new FilteredElementCollector(doc).OfClass(typeof(CeilingType))
                 : new FilteredElementCollector(doc).OfClass(typeof(FloorType)).OfCategory(BuiltInCategory.OST_Floors))
             .Cast<HostObjAttributes>().ToList();
         if (types.Count == 0) throw new CommandException(kind == SurfaceKind.Ceiling ? "Dự án chưa có Ceiling Type." : "Dự án chưa có Floor Type.");
 
-        var detected = regions.Select(r => (Region: r, TagName: TextTagReader.FindTagNameInside(r, textNotes))).ToList();
+        var detected = regions.Select(r => (Region: r, TagName: TextTagReader.FindTagNameInside(r, tags))).ToList();
         var groups = FloorNameGrouper.Build(detected, types);
 
         HostObjAttributes FindType(string name) =>
@@ -98,7 +99,7 @@ public sealed class CreateFloorsFromCad : RevitCommandBase
         {
             return new
             {
-                cad_id = cad.Id.Value, regions = regions.Count,
+                cad_id = cad.Id.Value, regions = regions.Count, tag_source = tagSource,
                 groups = Table.Of(groups.Select(g => new
                 {
                     name = g.Name, regions = g.Count, auto_matched = g.AutoMatched,

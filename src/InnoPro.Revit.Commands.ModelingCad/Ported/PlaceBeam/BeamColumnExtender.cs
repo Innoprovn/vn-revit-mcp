@@ -1,4 +1,4 @@
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 
 namespace InnoPro.Revit.Commands.ModelingCad.PlaceBeam;
@@ -21,6 +21,9 @@ internal static class BeamColumnExtender
             var endAtElevation = new XYZ(beam.End.X, beam.End.Y, elevation);
             var startTarget = FindTarget(startAtElevation, startDirection, columns, maxDistanceFeet);
             var endTarget = FindTarget(endAtElevation, endDirection, columns, maxDistanceFeet);
+            // Không kéo xuyên qua dầm thẳng hàng khác (dầm đã chia nhịp tại Grid nằm giữa đầu dầm và cột).
+            if (startTarget is not null && Blocked(beam, beam.Start, startTarget, beams)) startTarget = null;
+            if (endTarget is not null && Blocked(beam, beam.End, endTarget, beams)) endTarget = null;
             var start = startTarget is null ? beam.Start : new XYZ(startTarget.X, startTarget.Y, beam.Start.Z);
             var end = endTarget is null ? beam.End : new XYZ(endTarget.X, endTarget.Y, beam.End.Z);
 
@@ -107,6 +110,27 @@ internal static class BeamColumnExtender
         return bestEntry < double.MaxValue
             ? new XYZ(endpoint.X + direction.X * bestEntry, endpoint.Y + direction.Y * bestEntry, endpoint.Z)
             : null;
+    }
+
+    /// <summary>Đoạn kéo dài [from → to] có đè lên một dầm khác cùng trục hay không.</summary>
+    private static bool Blocked(RawBeam self, XYZ from, XYZ to, List<RawBeam> beams)
+    {
+        var tolerance = UnitUtils.ConvertToInternalUnits(PositionToleranceMm, UnitTypeId.Millimeters);
+        var dir = DirectionFrom(from, to);
+        if (dir is null) return false;
+        var perp = new XYZ(-dir.Y, dir.X, 0);
+        var length = new XYZ(to.X - from.X, to.Y - from.Y, 0).GetLength();
+        foreach (var other in beams)
+        {
+            if (ReferenceEquals(other, self)) continue;
+            var a = new XYZ(other.Start.X - from.X, other.Start.Y - from.Y, 0);
+            var b = new XYZ(other.End.X - from.X, other.End.Y - from.Y, 0);
+            if (Math.Abs(a.DotProduct(perp)) > self.WidthFeet / 2 || Math.Abs(b.DotProduct(perp)) > self.WidthFeet / 2) continue;
+            var lo = Math.Min(a.DotProduct(dir), b.DotProduct(dir));
+            var hi = Math.Max(a.DotProduct(dir), b.DotProduct(dir));
+            if (hi > tolerance && lo < length - tolerance) return true;
+        }
+        return false;
     }
 
     private static XYZ? DirectionFrom(XYZ from, XYZ to)

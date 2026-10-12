@@ -128,6 +128,7 @@ Mọi người đều có thể đóng góp lệnh, CommandSet, công thức. M�
 (kể cả đóng mã nguồn), và được phép chạy cùng Autodesk Revit.
 
 Một số lệnh tham khảo đặc tả từ [mcp-servers-for-revit](https://github.com/mcp-servers-for-revit) (MIT).
+Đọc chữ và leader trong file DWG/DXF dùng [ACadSharp](https://github.com/DomCR/ACadSharp) (MIT).
 
 ---
 

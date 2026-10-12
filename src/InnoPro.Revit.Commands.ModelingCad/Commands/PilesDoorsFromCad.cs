@@ -142,7 +142,7 @@ public sealed class PlaceDoorsWindowsFromCad : RevitCommandBase
     public override RibbonButton? Ribbon => new("Cửa CAD", "door");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
-        "Đặt cửa đi/cửa sổ vào tường theo ký hiệu cửa trên layer CAD; tên cửa đọc từ Text Note gần đó để chọn type.";
+        "Đặt cửa đi/cửa sổ vào tường theo ký hiệu cửa trên layer CAD; tên cửa đọc thẳng từ chữ CAD quanh lỗ mở (ưu tiên leader), bỏ qua chữ kích thước.";
     public override string InputSchema => """
         {
           "type": "object",
@@ -157,7 +157,8 @@ public sealed class PlaceDoorsWindowsFromCad : RevitCommandBase
             "sill_height_mm": { "type": "number", "description": "Cao độ bậu mặc định, mặc định 0." },
             "sill_heights": { "type": "object", "description": "Tên cửa → cao độ bậu mm." },
             "sill_from": { "type": "string", "enum": ["level", "finished_floor"], "description": "Mốc cao độ bậu." },
-            "text_search_mm": { "type": "number", "description": "Bán kính tìm tên, mặc định 2000." },
+            "text_search_mm": { "type": "number", "description": "Vùng tìm tên quanh lỗ cửa, mặc định 2000." },
+            "text_layers": { "type": "array", "items": { "type": "string" }, "description": "Layer chữ tên cửa trong CAD; mặc định mọi layer." },
             "width_parameter": { "type": "string", "description": "Mặc định Width." },
             "height_parameter": { "type": "string", "description": "Mặc định Height." },
             "dry_run": { "type": "boolean", "description": "Chỉ phân tích." }
@@ -183,10 +184,14 @@ public sealed class PlaceDoorsWindowsFromCad : RevitCommandBase
         var segments = layers.SelectMany(l => scan.SegmentsByLayer.TryGetValue(l, out var s) ? s : []).ToList();
         var arcs = layers.SelectMany(l => scan.ArcsByLayer.TryGetValue(l, out var a) ? a : []).ToList();
 
-        var walls = new FilteredElementCollector(doc, view.Id).OfClass(typeof(Wall)).Cast<Wall>().ToList();
+        // Mọi tường cắt qua cao độ tầng của mặt bằng (không lọc theo view: crop view có thể che mất tường).
+        var elevation = (view as ViewPlan)?.GenLevel?.Elevation ?? 0;
+        var walls = new FilteredElementCollector(doc).OfClass(typeof(Wall)).Cast<Wall>()
+            .Where(w => w.get_BoundingBox(null) is { } box && box.Min.Z <= elevation + 0.5 && box.Max.Z >= elevation + 0.5)
+            .ToList();
         if (walls.Count == 0) throw new CommandException("Mặt bằng chưa có tường để đặt cửa.");
-        var notes = new FilteredElementCollector(doc, view.Id).OfClass(typeof(TextNote)).Cast<TextNote>().ToList();
-        var instances = Door.OpeningDetector.Detect(segments, arcs, walls, notes,
+        var tags = StructureHelper.Tags(doc, cad, view, arguments, out var tagSource);
+        var instances = Door.OpeningDetector.Detect(segments, arcs, walls, tags,
             ArgsX.Mm(arguments, "text_search_mm", Door.TextTagReader.DefaultSearchRadiusMm));
 
         List<FamilySymbol> Symbols(BuiltInCategory c) =>
@@ -237,7 +242,7 @@ public sealed class PlaceDoorsWindowsFromCad : RevitCommandBase
         }));
 
         if (Args.GetBoolOrDefault(arguments, "dry_run", false))
-            return new { cad_id = cad.Id.Value, openings = instances.Count, groups = Groups() };
+            return new { cad_id = cad.Id.Value, openings = instances.Count, named = instances.Count(i => i.TagName != null), tag_source = tagSource, groups = Groups() };
 
         var grids = new FilteredElementCollector(doc, view.Id).OfClass(typeof(Grid)).Cast<Grid>().ToList();
         var mode = ArgsX.Enum(arguments, "sill_from", "level", "level", "finished_floor") == "finished_floor"

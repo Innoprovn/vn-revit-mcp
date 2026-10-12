@@ -1,4 +1,4 @@
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.DB;
 
 namespace InnoPro.Revit.Commands.ModelingCad.PlaceBeam;
 
@@ -40,8 +40,8 @@ internal static class CadBeamScanner
         if (geometryElement is not null)
             Walk(doc, geometryElement, linesByLayer, 0);
 
-        var gridBoundariesX = GetGridBoundaries(doc, isXDirection: true);
-        var gridBoundariesY = GetGridBoundaries(doc, isXDirection: false);
+        var gridBoundariesX = GetGridBoundaries(doc, isXDirection: true).Concat(GetColumnBoundaries(doc, isXDirection: true)).ToList();
+        var gridBoundariesY = GetGridBoundaries(doc, isXDirection: false).Concat(GetColumnBoundaries(doc, isXDirection: false)).ToList();
 
         var beamsByLayer = new Dictionary<string, List<RawBeam>>(StringComparer.Ordinal);
         var allOrphans = new List<(XYZ A, XYZ B, string LayerName)>();
@@ -153,7 +153,7 @@ internal static class CadBeamScanner
 
     /// <summary>Ghép cặp 2 Line song song gần nhau theo phương X/Y thành 1 dầm — thuần hình học, Text chỉ dùng SAU KHI ghép xong (xem BeamTagReader.AttachTags).</summary>
     internal static PairResult PairLines(
-        List<(XYZ A, XYZ B)> segments, List<double> gridBoundariesX, List<double> gridBoundariesY)
+        List<(XYZ A, XYZ B)> segments, List<(double At, double PerpMin, double PerpMax)> gridBoundariesX, List<(double At, double PerpMin, double PerpMax)> gridBoundariesY)
     {
         var xLines = new List<(XYZ A, XYZ B)>();
         var yLines = new List<(XYZ A, XYZ B)>();
@@ -192,7 +192,7 @@ internal static class CadBeamScanner
     /// đã gộp (xem SplitAtGridBoundaries) — mỗi khoảng Grid (nhịp) luôn là 1 đoạn riêng, không có trường hợp gộp
     /// xuyên nhịp dù 2 bên cùng tên Text.</summary>
     private static List<(XYZ A, XYZ B)> MergeCollinearFragments(
-        List<(XYZ A, XYZ B)> segments, bool isXDirection, List<double> gridBoundaries)
+        List<(XYZ A, XYZ B)> segments, bool isXDirection, List<(double At, double PerpMin, double PerpMax)> gridBoundaries)
     {
         var used = new bool[segments.Count];
         var result = new List<(XYZ A, XYZ B)>();
@@ -246,10 +246,13 @@ internal static class CadBeamScanner
     /// <summary>Cắt 1 đoạn dọc trục [alongMin, alongMax] thành nhiều đoạn tại MỌI giao điểm Grid thật nằm bên
     /// trong (không có ngoại lệ) — mỗi khoảng Grid ra đúng 1 đoạn riêng.</summary>
     private static List<(XYZ A, XYZ B)> SplitAtGridBoundaries(
-        double alongMin, double alongMax, double perp, bool isXDirection, List<double> gridBoundaries)
+        double alongMin, double alongMax, double perp, bool isXDirection, List<(double At, double PerpMin, double PerpMax)> gridBoundaries)
     {
         var cuts = gridBoundaries
+            .Where(b => perp >= b.PerpMin && perp <= b.PerpMax)
+            .Select(b => b.At)
             .Where(b => b > alongMin + MinSplitFragmentFeet && b < alongMax - MinSplitFragmentFeet)
+            .Distinct()
             .OrderBy(b => b)
             .ToList();
 
@@ -575,9 +578,9 @@ internal static class CadBeamScanner
     }
 
     /// <summary>Toạ độ dọc trục (mm) của các trục Grid thật VUÔNG GÓC với phương đang xét — Grid thẳng, xiên/cong bị bỏ qua. Ranh giới dừng merge cho MergeCollinearFragments.</summary>
-    private static List<double> GetGridBoundaries(Document doc, bool isXDirection)
+    private static List<(double At, double PerpMin, double PerpMax)> GetGridBoundaries(Document doc, bool isXDirection)
     {
-        var boundaries = new List<double>();
+        var boundaries = new List<(double At, double PerpMin, double PerpMax)>();
 
         foreach (var grid in new FilteredElementCollector(doc).OfClass(typeof(Grid)).Cast<Grid>())
         {
@@ -598,10 +601,27 @@ internal static class CadBeamScanner
             if (!TryClassifyAxis(p0, p1, out var gridIsXDirection) || gridIsXDirection == isXDirection)
                 continue; // Grid xien hoac cung phuong voi dam - khong phai ranh gioi vuong goc, bo qua.
 
-            boundaries.Add(isXDirection ? (p0.X + p1.X) / 2.0 : (p0.Y + p1.Y) / 2.0);
+            boundaries.Add((isXDirection ? (p0.X + p1.X) / 2.0 : (p0.Y + p1.Y) / 2.0, double.NegativeInfinity, double.PositiveInfinity));
         }
 
         return boundaries;
     }
 
+    /// <summary>
+    /// Cột kết cấu đã có trong mô hình cũng là gối của dầm: dầm đi qua cột (nét dầm nằm trong bề rộng cột, có đệm)
+    /// được cắt nhịp tại tâm cột. Nhờ vậy bản vẽ chưa có Grid trong Revit vẫn chia nhịp đúng.
+    /// </summary>
+    private static List<(double At, double PerpMin, double PerpMax)> GetColumnBoundaries(Document doc, bool isXDirection)
+    {
+        var pad = UnitUtils.ConvertToInternalUnits(200.0, UnitTypeId.Millimeters);
+        var boundaries = new List<(double At, double PerpMin, double PerpMax)>();
+        foreach (var column in new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_StructuralColumns).WhereElementIsNotElementType())
+        {
+            if (column.get_BoundingBox(null) is not { } box) continue;
+            boundaries.Add(isXDirection
+                ? ((box.Min.X + box.Max.X) / 2.0, box.Min.Y - pad, box.Max.Y + pad)
+                : ((box.Min.Y + box.Max.Y) / 2.0, box.Min.X - pad, box.Max.X + pad));
+        }
+        return boundaries;
+    }
 }

@@ -1,14 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
+    <!-- Chép ACadSharp vào thư mục CommandSet (đọc chữ, leader trực tiếp từ file DWG/DXF). -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Description>CommandSet Modeling-CAD của vn-revit-mcp: dựng tường, sàn, cột, dầm, cọc, cửa từ bản vẽ CAD và các công cụ dựng hình bổ trợ.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
     <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="ACadSharp" Version="3.8.0" />
   </ItemGroup>
 
   <ItemGroup>
