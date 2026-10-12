@@ -53,5 +53,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler
         }
     }
 
+    public bool HasPending => !_queue.IsEmpty;
+
     public string GetName() => "InnoPro vn-revit-mcp";
 }

@@ -16,14 +16,16 @@ internal sealed class PipeBridge
     private readonly Func<ReloadResult> _reload;
     private readonly RevitDispatcher _dispatcher;
     private readonly Func<RevitStatus> _status;
+    private readonly Func<bool> _hasDocument;
     private CancellationTokenSource? _cts;
 
-    public PipeBridge(Func<CommandRegistry> registry, Func<ReloadResult> reload, RevitDispatcher dispatcher, Func<RevitStatus> status)
+    public PipeBridge(Func<CommandRegistry> registry, Func<ReloadResult> reload, RevitDispatcher dispatcher, Func<RevitStatus> status, Func<bool> hasDocument)
     {
         _registry = registry;
         _reload = reload;
         _dispatcher = dispatcher;
         _status = status;
+        _hasDocument = hasDocument;
     }
 
     public string PipeName { get; } = BridgeProtocol.PipeName(Environment.ProcessId);
@@ -126,6 +128,10 @@ internal sealed class PipeBridge
         if (!_registry().TryGet(invoke.Name, out var loaded))
             return Fail(request.Id, $"Không có lệnh '{invoke.Name}'.");
 
+        // Ở màn hình Home (chưa mở dự án) Revit không chạy lệnh API: báo ngay thay vì chờ hết giờ.
+        if (!_hasDocument())
+            return Fail(request.Id, "Revit chưa mở dự án nào. Hãy mở hoặc tạo một dự án trong Revit rồi thử lại.");
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(InvokeTimeout);
 
@@ -139,7 +145,7 @@ internal sealed class PipeBridge
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
         {
             return Fail(request.Id,
-                "Revit không phản hồi kịp. Có thể Revit đang bận hoặc đang mở một hộp thoại; hãy đóng hộp thoại rồi thử lại.");
+                "Revit không phản hồi kịp. Có thể Revit đang bận (nạp mô hình, đang chạy lệnh khác) hoặc đang mở một hộp thoại; hãy đóng hộp thoại rồi thử lại.");
         }
     }
 

@@ -26,6 +26,15 @@ public sealed class App : IExternalApplication
 
     private string _revitVersion = "";
     private volatile string? _activeDocument;
+    private int _openDocuments;
+
+    /// <summary>Revit chỉ nhận lệnh API (ExternalEvent) khi đã mở ít nhất một dự án.</summary>
+    internal bool HasOpenDocument => Volatile.Read(ref _openDocuments) > 0;
+
+    private void OnIdling(object? sender, Autodesk.Revit.UI.Events.IdlingEventArgs e)
+    {
+        if (_dispatcher.HasPending && sender is UIApplication uiApp) _dispatcher.Execute(uiApp);
+    }
 
     public Result OnStartup(UIControlledApplication application)
     {
@@ -40,7 +49,7 @@ public sealed class App : IExternalApplication
             WriteManifest();
 
             _dispatcher = new RevitDispatcher();
-            Bridge = new PipeBridge(() => _registry, ReloadCommands, _dispatcher, Status);
+            Bridge = new PipeBridge(() => _registry, ReloadCommands, _dispatcher, Status, () => HasOpenDocument);
             Bridge.Start();
 
             ChatHost = new ChatHost(this, _dispatcher);
@@ -49,6 +58,11 @@ public sealed class App : IExternalApplication
             ButtonRunner.Register();
             RibbonManager.Initialize(application, _registry);
             application.ViewActivated += OnViewActivated;
+            // Dự phòng: có lúc Revit chậm xử lý ExternalEvent (đang nạp mô hình...); Idling chạy hàng đợi khi rảnh.
+            application.Idling += OnIdling;
+            application.ControlledApplication.DocumentOpened += (_, _) => Interlocked.Increment(ref _openDocuments);
+            application.ControlledApplication.DocumentCreated += (_, _) => Interlocked.Increment(ref _openDocuments);
+            application.ControlledApplication.DocumentClosed += (_, _) => Interlocked.Decrement(ref _openDocuments);
 
             if (CommandRegistry.HasScripts(Paths.ScriptRoots))
                 Task.Run(ReloadCommands);
@@ -64,6 +78,7 @@ public sealed class App : IExternalApplication
     public Result OnShutdown(UIControlledApplication application)
     {
         application.ViewActivated -= OnViewActivated;
+        application.Idling -= OnIdling;
         Bridge?.Stop();
         return Result.Succeeded;
     }

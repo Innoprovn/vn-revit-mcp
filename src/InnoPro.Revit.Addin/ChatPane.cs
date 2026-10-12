@@ -57,6 +57,8 @@ internal sealed class ChatHost(App app, RevitDispatcher dispatcher) : IRevitHost
     {
         if (!app.Registry.TryGet(name, out var loaded))
             throw new InvalidOperationException($"Không có lệnh '{name}'. Dùng find_commands để tra tên đúng.");
+        if (!app.HasOpenDocument)
+            throw new InvalidOperationException("Revit chưa mở dự án nào. Hãy mở hoặc tạo một dự án rồi thử lại.");
         JsonElement? args = string.IsNullOrWhiteSpace(argumentsJson) ? null : JsonDocument.Parse(argumentsJson).RootElement;
 
         try

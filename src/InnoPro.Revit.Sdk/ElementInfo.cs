@@ -21,6 +21,7 @@ public static class ElementInfo
     public static bool IsPhysical(Element e) =>
         e.Category is { CategoryType: CategoryType.Model } category
         && !category.Name.StartsWith('<')
+        && category.BuiltInCategory is not (BuiltInCategory.OST_LegendComponents or BuiltInCategory.OST_PreviewLegendComponents)
         && !e.ViewSpecific
         && e is not (Material or PropertySetElement or AppearanceAssetElement or SunAndShadowSettings or ElementType);
 

@@ -45,7 +45,7 @@ internal static class ScriptCompiler
 
     public static (ScriptEntry Entry, AssemblyLoadContext Context) Compile(string code)
     {
-        var tree = CSharpSyntaxTree.ParseText(Prefix + code + Suffix,
+        var tree = CSharpSyntaxTree.ParseText(Prefix + "\n" + code + Suffix,
             new CSharpParseOptions(LanguageVersion.Latest));
         var compilation = CSharpCompilation.Create(
             "InnoProScript_" + Guid.NewGuid().ToString("N"),
