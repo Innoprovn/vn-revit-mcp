@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWPF>true</UseWPF>
+    <Description>Add-in Revit của vn-revit-mcp: tab InnoPro, nạp CommandSet, cầu nối tới MCP server.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InnoPro.Revit.Sdk\InnoPro.Revit.Sdk.csproj" />
+    <ProjectReference Include="..\InnoPro.Bridge\InnoPro.Bridge.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Project WPF bỏ System.IO khỏi implicit usings vì trùng tên System.Windows.Shapes.Path. -->
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="InnoPro.VnRevitMcp.addin" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

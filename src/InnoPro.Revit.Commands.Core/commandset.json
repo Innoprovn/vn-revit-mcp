@@ -1,0 +1,6 @@
+{
+  "name": "Core",
+  "description": "Lệnh cơ bản: tài liệu, view, phần tử, tham số, thống kê mô hình.",
+  "author": "InnoPro",
+  "assemblies": [ "InnoPro.Revit.Commands.Core.dll" ]
+}

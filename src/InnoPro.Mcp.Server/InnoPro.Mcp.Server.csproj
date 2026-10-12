@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>vn-revit-mcp</AssemblyName>
+    <RootNamespace>InnoPro.Mcp.Server</RootNamespace>
+    <Description>MCP server của vn-revit-mcp: công bố các lệnh Revit thành tool cho mọi AI client hỗ trợ MCP.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InnoPro.Bridge\InnoPro.Bridge.csproj" />
+  </ItemGroup>
+
+</Project>

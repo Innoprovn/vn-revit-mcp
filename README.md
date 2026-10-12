@@ -1,0 +1,108 @@
+# vn-revit-mcp
+
+**Cho AI điều khiển Autodesk Revit.** Mã nguồn mở, miễn phí, do [InnoPro](https://innopro.vn) phát triển.
+
+vn-revit-mcp đưa các lệnh Revit thành công cụ theo chuẩn [Model Context Protocol (MCP)](https://modelcontextprotocol.io),
+nên dùng được với mọi AI client hỗ trợ MCP qua stdio: Claude (Desktop, Code), Cursor, VS Code, LM Studio...,
+kể cả model chạy local trên máy.
+
+> 🚧 **Đang ở giai đoạn P0 (nền móng).** Chưa có bộ cài, chưa có khung chat trong Revit. Xem [lộ trình](#lộ-trình).
+
+## Tính năng
+
+- **Tab InnoPro** riêng trong Revit, bật/tắt quyền điều khiển của AI bằng một nút.
+- **CommandSet dạng plugin:** mỗi bộ lệnh là một DLL, thêm lệnh không cần sửa MCP server.
+- **Chạy hoàn toàn trên máy bạn:** add-in và MCP server nói chuyện qua named pipe, chỉ cùng tài khoản
+  Windows mới kết nối được, không mở cổng mạng nào.
+- **An toàn khi sửa mô hình:** lệnh sửa mô hình được bọc trong Transaction, lỗi thì rollback, Undo được trong Revit.
+- Hỗ trợ **Revit 2025 trở lên**.
+
+## Kiến trúc
+
+```
+AI client ──MCP (stdio)──▶ vn-revit-mcp.exe ──named pipe──▶ Add-in InnoPro (trong Revit) ──▶ Revit API
+                                                               └─ CommandSet: Core, Rebar, QA-QC, ...
+```
+
+| Thành phần | Thư mục | Vai trò |
+|---|---|---|
+| `InnoPro.Revit.Sdk` | `src/InnoPro.Revit.Sdk` | Interface để viết lệnh (`IRevitCommand`, `Args`, `UnitConvert`) |
+| `InnoPro.Revit.Addin` | `src/InnoPro.Revit.Addin` | Add-in: tab InnoPro, nạp CommandSet, chạy lệnh trên luồng Revit |
+| `InnoPro.Bridge` | `src/InnoPro.Bridge` | Giao thức named pipe dùng chung |
+| `InnoPro.Mcp.Server` | `src/InnoPro.Mcp.Server` | MCP server, công bố lệnh thành tool |
+| `InnoPro.Revit.Commands.Core` | `src/InnoPro.Revit.Commands.Core` | CommandSet cơ bản |
+
+Chi tiết: [docs/kien-truc.md](docs/kien-truc.md).
+
+## Lệnh hiện có (CommandSet Core)
+
+| Tool | Việc làm |
+|---|---|
+| `revit_status` | Kiểm tra kết nối tới Revit |
+| `get_document_info` | Thông tin tài liệu đang mở |
+| `get_current_view_info` | Thông tin view đang mở |
+| `get_selected_elements` | Phần tử đang chọn |
+| `get_element_parameters` | Tham số của một phần tử |
+| `list_levels` | Danh sách tầng và cao độ (mm) |
+| `analyze_model_statistics` | Thống kê phần tử theo category |
+| `select_elements` | Chọn và zoom tới phần tử theo id |
+
+## Cài đặt cho nhà phát triển
+
+Cần: Windows, Revit 2025 trở lên, [.NET SDK 8](https://dotnet.microsoft.com/download).
+
+```powershell
+# Đóng Revit trước
+powershell -ExecutionPolicy Bypass -File scripts\install-dev.ps1
+claude mcp add vn-revit-mcp --scope user -- "%LOCALAPPDATA%\InnoPro\vn-revit-mcp\server\vn-revit-mcp.exe"
+```
+
+Mở Revit, mở một dự án, rồi hỏi AI: *"Mô hình Revit đang mở có bao nhiêu phần tử?"*
+
+Với client khác, khai báo MCP server kiểu **stdio** với command là đường dẫn `vn-revit-mcp.exe` ở trên.
+Mở nhiều phiên Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
+
+## Viết lệnh mới
+
+Xem [docs/viet-lenh-moi.md](docs/viet-lenh-moi.md). Ví dụ tối thiểu:
+
+```csharp
+public sealed class CountWalls : RevitCommandBase
+{
+    public override string Name => "count_walls";
+    public override string Description => "Đếm số tường trong mô hình.";
+
+    public override object? Execute(RevitCommandContext context, JsonElement arguments) =>
+        new { count = new FilteredElementCollector(context.Document).OfClass(typeof(Wall)).GetElementCount() };
+}
+```
+
+## Lộ trình
+
+| Giai đoạn | Nội dung |
+|---|---|
+| **P0 (đang làm)** | Add-in, tab InnoPro, nạp CommandSet, cầu nối, MCP server, lệnh truy vấn cơ bản |
+| P1 | Thêm CommandSet: Kiến trúc, Kết cấu, Rebar, QA-QC, Bản vẽ, Dữ liệu; chạy mã C# có kiểm soát |
+| P2 | Khung chat trong Revit: Claude, OpenAI, Gemini, Ollama, LM Studio |
+| P3 | Bộ cài một dòng, tự cập nhật, đăng MCP Registry |
+| P4 | App chat độc lập ngoài Revit |
+
+## Đóng góp
+
+Mọi người đều có thể đóng góp CommandSet mới hoặc cải tiến lệnh. Mở issue hoặc pull request trên GitHub.
+
+## License
+
+[GPLv3](LICENSE) kèm [ngoại lệ plugin](LICENSE-EXCEPTION.md): CommandSet của bạn được giữ license riêng
+(kể cả đóng mã nguồn), và được phép chạy cùng Autodesk Revit.
+
+Một số lệnh tham khảo đặc tả từ [mcp-servers-for-revit](https://github.com/mcp-servers-for-revit) (MIT).
+
+---
+
+# English
+
+**vn-revit-mcp** lets any MCP-capable AI client (Claude, Cursor, VS Code, local LLMs...) drive Autodesk Revit 2025+.
+A Revit add-in adds an **InnoPro** ribbon tab, loads plugin **Command Sets**, and talks to a local MCP server
+over a per-user named pipe. Licensed GPLv3 with a plugin exception. Developer setup: run
+`scripts/install-dev.ps1` with Revit closed, then register `vn-revit-mcp.exe` as a stdio MCP server.

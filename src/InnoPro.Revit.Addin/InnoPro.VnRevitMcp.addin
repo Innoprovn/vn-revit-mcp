@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>vn-revit-mcp</Name>
+    <Assembly>InnoPro.VnRevitMcp\InnoPro.Revit.Addin.dll</Assembly>
+    <FullClassName>InnoPro.Revit.Addin.App</FullClassName>
+    <ClientId>2C094443-BAE5-4DAD-83DF-1DF8DDDF5C68</ClientId>
+    <VendorId>InnoPro</VendorId>
+    <VendorDescription>InnoPro, https://github.com/Innoprovn/vn-revit-mcp</VendorDescription>
+  </AddIn>
+</RevitAddIns>
