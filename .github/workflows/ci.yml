@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        run: dotnet build vn-revit-mcp.sln -c Release
+
+      - name: Kiểm tra cửa hàng lệnh cộng đồng
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-community.ps1
+
+      - name: Kiểm tra cú pháp PowerShell (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $bad = 0
+          Get-ChildItem -Recurse -Filter *.ps1 | Where-Object { $_.FullName -notmatch '\\(bin|obj|artifacts)\\' } | ForEach-Object {
+            $errors = $null
+            [void][Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$errors)
+            if ($errors) { Write-Host "::error file=$($_.FullName)::$($errors[0].Message)"; $bad++ }
+          }
+          if ($bad) { exit 1 }
