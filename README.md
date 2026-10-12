@@ -1,4 +1,4 @@
-﻿# vn-revit-mcp
+# vn-revit-mcp
 
 **Cho AI làm việc với Autodesk Revit.** Mã nguồn mở, miễn phí, do [InnoPro](https://innopro.vn) phát triển.
 
@@ -26,7 +26,7 @@ Xong: mở Revit, tab **InnoPro**. Dùng theo một trong ba cách:
 - **Gói Claude Pro/Max:** trong khung chat chọn *Claude (gói Pro/Max)* → *Kết nối và mở Claude*.
 - **AI bên ngoài** (Claude Desktop, Cursor, VS Code...): đã tự kết nối khi cài; khởi động lại ứng dụng AI rồi hỏi.
 
-Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md).
+Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md). Dựng hình từ CAD: [docs/dung-hinh-tu-cad.md](docs/dung-hinh-tu-cad.md).
 
 | Việc | Cách làm |
 |---|---|

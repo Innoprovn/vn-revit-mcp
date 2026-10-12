@@ -28,7 +28,7 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
     public override RibbonButton? Ribbon => new("Cột CAD", "column");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
-        "Đặt cột kết cấu theo đường bao chữ nhật trên layer CAD, đúng kích thước và góc xoay. Tự tạo type thiếu nếu có column_family.";
+        "Đặt cột kết cấu theo đường bao chữ nhật trên layer CAD, đúng kích thước và góc xoay; tự tạo type thiếu. Tên cột (C1, K2...) đọc từ chữ CAD quanh cột, ghi vào Mark.";
     public override string InputSchema => """
         {
           "type": "object",
@@ -39,10 +39,16 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
             "top_level": { "type": "string", "description": "Mặc định tầng ngay trên." },
             "column_family": { "type": "string", "description": "Family có tham số b, h để tạo type thiếu; mặc định tự chọn." },
             "type_map": { "type": "object", "description": "Kích thước \"500x300\" → type." },
+            "name_parameter": { "type": "string", "description": "Tham số ghi tên cột, mặc định Mark; \"\" để bỏ qua." },
+            "text_search_mm": { "type": "number", "description": "Vùng tìm tên quanh cột, mặc định 1000." },
+            "text_layers": { "type": "array", "items": { "type": "string" }, "description": "Layer chữ tên cột trong CAD; mặc định mọi layer." },
             "dry_run": { "type": "boolean", "description": "Chỉ phân tích." }
           }
         }
         """;
+
+    /// <summary>Tên cột: chữ cái + số (C1, C-1, K12, CT2a).</summary>
+    private static readonly System.Text.RegularExpressions.Regex ColumnMark = new(@"^\p{L}{1,3}[-.]?\d{1,3}\p{L}?$");
 
     public override object? PromptArguments(RevitCommandContext context)
     {
@@ -83,8 +89,19 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
             size = Key(g), count = g.Columns.Count, type = g.SelectedType?.DisplayName, exact = g.IsExactMatch,
         }));
 
+        // Tên cột: chữ dạng C1 quanh khung cột (leader chỉ vào cột là chắc chắn).
+        var tags = StructureHelper.Tags(doc, cad, view, arguments, out var tagSource).Where(t => ColumnMark.IsMatch(t.Text)).ToList();
+        var expand = ArgsX.Mm(arguments, "text_search_mm", 1000);
+        var names = TagMatcher.Assign(columns, tags, (c, tag) =>
+            TagMatcher.Point(tag, c.Center, new XYZ(Math.Cos(c.AngleRadians), Math.Sin(c.AngleRadians), 0), c.LengthFeet / 2, c.WidthFeet / 2, expand));
+        string? NameOf(Column.RawColumn c) => names.TryGetValue(columns.IndexOf(c), out var t) ? t.Text : null;
+
         if (Args.GetBoolOrDefault(arguments, "dry_run", false))
-            return new { cad_id = cad.Id.Value, columns = columns.Count, groups = Groups() };
+            return new
+            {
+                cad_id = cad.Id.Value, columns = columns.Count, named = names.Count, tag_source = tagSource, groups = Groups(),
+                names = string.Join(", ", columns.Select(NameOf).Where(n => n != null).Distinct().OrderBy(n => n)),
+            };
 
         var typeErrors = new List<string>();
         if (groups.Any(g => !g.IsExactMatch))
@@ -97,9 +114,27 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
         }
 
         var summary = Column.ColumnPlacer.Place(doc, groups, level, top);
+
+        // Ghi tên: cột vừa tạo khớp với khung CAD có tâm gần nhất.
+        var named = 0;
+        var nameParameter = Args.GetStringOrDefault(arguments, "name_parameter", "Mark");
+        if (!string.IsNullOrEmpty(nameParameter) && names.Count > 0)
+        {
+            var tolerance = UnitConvert.MmToFeet(50);
+            foreach (var id in summary.CreatedIds)
+            {
+                if (doc.GetElement(id) is not FamilyInstance fi || fi.Location is not LocationPoint lp) continue;
+                var at = new XYZ(lp.Point.X, lp.Point.Y, 0);
+                var source = columns.FirstOrDefault(c => new XYZ(c.Center.X, c.Center.Y, 0).DistanceTo(at) <= tolerance);
+                if (source == null || NameOf(source) is not { } name) continue;
+                var parameter = nameParameter == "Mark" ? fi.get_Parameter(BuiltInParameter.ALL_MODEL_MARK) : fi.LookupParameter(nameParameter);
+                if (parameter is { IsReadOnly: false, StorageType: StorageType.String } && parameter.Set(name)) named++;
+            }
+        }
+
         return new
         {
-            created = summary.Created, skipped_existing = summary.Skipped, failed = summary.Failed,
+            created = summary.Created, named, skipped_existing = summary.Skipped, failed = summary.Failed,
             groups = Groups(), errors = typeErrors.Concat(summary.Errors).Take(20).ToList(),
             element_ids = ArgsX.Ids(summary.CreatedIds.Take(500)),
         };
