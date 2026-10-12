@@ -1,0 +1,21 @@
+{
+    "$schema":  "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+    "name":  "io.github.Innoprovn/vn-revit-mcp",
+    "title":  "vn-revit-mcp",
+    "description":  "Let AI drive Autodesk Revit 2025+: queries, QA-QC, modeling from CAD, rebar, sheets. Vietnamese-first.",
+    "repository":  {
+                       "url":  "https://github.com/Innoprovn/vn-revit-mcp",
+                       "source":  "github"
+                   },
+    "version":  "0.3.0",
+    "packages":  [
+                     {
+                         "registryType":  "mcpb",
+                         "identifier":  "https://github.com/Innoprovn/vn-revit-mcp/releases/download/v0.3.0/vn-revit-mcp-0.3.0.mcpb",
+                         "fileSha256":  "acec4ccadc57ecd2b684e6bb9ea0d39fbfc293bd101205cfb182b07d423e5e79",
+                         "transport":  {
+                                           "type":  "stdio"
+                                       }
+                     }
+                 ]
+}

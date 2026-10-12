@@ -10,6 +10,10 @@ using ModelContextProtocol.Protocol;
 // "vn-revit-mcp setup|unsetup|clients": cấu hình các AI client trên máy, không chạy MCP server.
 if (SetupCli.IsSetupCommand(args)) { Environment.ExitCode = SetupCli.Run(args); return; }
 
+// Chạy từ gói .mcpb: tự cài/cập nhật add-in Revit mang theo trong gói (chạy nền).
+args = BundleInstaller.TakeBundleArg(args, out var bundleDir);
+if (bundleDir != null) BundleInstaller.EnsureInBackground(bundleDir);
+
 var builder = Host.CreateApplicationBuilder(args);
 
 // stdout là kênh MCP, mọi log phải ra stderr.

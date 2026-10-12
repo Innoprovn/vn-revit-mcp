@@ -83,3 +83,62 @@ try {
 finally { $archive.Dispose() }
 
 Write-Host "Đã đóng gói: $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)" -ForegroundColor Green
+
+# ---- Gói .mcpb cho Claude Desktop (Settings → Extensions → Install Extension) ----
+# Cùng nội dung bản zip, thêm manifest.json và icon.png. Server chạy với "--bundle <thư mục gói>" nên lần đầu
+# tự cài add-in Revit mang theo (xem src\InnoPro.Mcp.Server\Setup\BundleInstaller.cs).
+$manifest = [ordered]@{
+    manifest_version = "0.3"
+    name             = "vn-revit-mcp"
+    display_name     = "vn-revit-mcp (Revit)"
+    version          = $version
+    description      = "Cho AI điều khiển Autodesk Revit 2025+: truy vấn, QA-QC, dựng hình từ CAD, cốt thép, bản vẽ."
+    long_description = "Cài extension này là đủ: lần chạy đầu tự cài add-in InnoPro vào Revit 2025/2026 (không cần quyền admin). Mở lại Revit, vào tab InnoPro rồi hỏi Claude về mô hình đang mở."
+    author           = [ordered]@{ name = "InnoPro"; url = "https://innopro.vn" }
+    repository       = [ordered]@{ type = "git"; url = "https://github.com/Innoprovn/vn-revit-mcp" }
+    homepage         = "https://github.com/Innoprovn/vn-revit-mcp"
+    documentation    = "https://github.com/Innoprovn/vn-revit-mcp/blob/main/docs/huong-dan-su-dung.md"
+    support          = "https://github.com/Innoprovn/vn-revit-mcp/issues"
+    icon             = "icon.png"
+    license          = "GPL-3.0-or-later"
+    keywords         = @("revit", "bim", "autodesk", "cad", "rebar", "vietnam")
+    server           = [ordered]@{
+        type        = "binary"
+        entry_point = "server/vn-revit-mcp.exe"
+        mcp_config  = [ordered]@{ command = '${__dirname}/server/vn-revit-mcp.exe'; args = @("--bundle", '${__dirname}'); env = @{} }
+    }
+    tools_generated   = $true
+    prompts_generated = $true
+    compatibility     = [ordered]@{ platforms = @("win32") }
+}
+[IO.File]::WriteAllText((Join-Path $stage "manifest.json"), ($manifest | ConvertTo-Json -Depth 6), $ascii)
+
+# Icon 512x512: khối lập phương nét trắng trên nền xanh InnoPro (cùng bộ icon vector của ribbon).
+Add-Type -AssemblyName PresentationCore, PresentationFramework, WindowsBase
+$visual = New-Object System.Windows.Media.DrawingVisual
+$dc = $visual.RenderOpen()
+$brand = New-Object System.Windows.Media.SolidColorBrush ([System.Windows.Media.Color]::FromRgb(0x0B, 0x5C, 0xAD))
+$dc.DrawRoundedRectangle($brand, $null, (New-Object System.Windows.Rect 0, 0, 512, 512), 96, 96)
+$cube = [System.Windows.Media.Geometry]::Parse("M12 3l8.5 4.5v9L12 21l-8.5-4.5v-9z M3.5 7.5L12 12l8.5-4.5 M12 12v9").Clone()
+$cube.Transform = New-Object System.Windows.Media.MatrixTransform 15, 0, 0, 15, 76, 76
+$pen = New-Object System.Windows.Media.Pen ([System.Windows.Media.Brushes]::White), 28
+$pen.StartLineCap = $pen.EndLineCap = $pen.LineJoin = "Round"
+$dc.DrawGeometry($null, $pen, $cube)
+$dc.Close()
+$bitmap = New-Object System.Windows.Media.Imaging.RenderTargetBitmap 512, 512, 96, 96, ([System.Windows.Media.PixelFormats]::Pbgra32)
+$bitmap.Render($visual)
+$encoder = New-Object System.Windows.Media.Imaging.PngBitmapEncoder
+$encoder.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+$png = [IO.File]::Create((Join-Path $stage "icon.png")); try { $encoder.Save($png) } finally { $png.Dispose() }
+
+$mcpb = Join-Path $release "vn-revit-mcp-$version.mcpb"
+if (Test-Path $mcpb) { Remove-Item $mcpb -Force }
+$archive = [IO.Compression.ZipFile]::Open($mcpb, [IO.Compression.ZipArchiveMode]::Create)
+try {
+    foreach ($file in Get-ChildItem $stage -Recurse -File | Where-Object { $_.Name -notin "Cai-dat.cmd", "HUONG-DAN.txt" }) {
+        $entry = $file.FullName.Substring($stage.Length + 1).Replace('\', '/')
+        [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entry, [IO.Compression.CompressionLevel]::Optimal)
+    }
+}
+finally { $archive.Dispose() }
+Write-Host "Đã đóng gói: $mcpb ($([math]::Round((Get-Item $mcpb).Length / 1MB, 1)) MB)" -ForegroundColor Green

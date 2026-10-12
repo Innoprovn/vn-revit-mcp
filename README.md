@@ -20,6 +20,9 @@ irm https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/install.ps1 | 
 Hoặc tải `vn-revit-mcp-<phiên bản>-win-x64.zip` ở [Releases](https://github.com/Innoprovn/vn-revit-mcp/releases),
 giải nén rồi bấm đúp **`Cai-dat.cmd`**.
 
+**Dùng Claude Desktop:** tải `vn-revit-mcp-<phiên bản>.mcpb` ở [Releases](https://github.com/Innoprovn/vn-revit-mcp/releases)
+rồi bấm đúp (hoặc Claude Desktop → Settings → Extensions → Install Extension). Extension tự cài add-in Revit ở lần chạy đầu.
+
 Xong: mở Revit, tab **InnoPro**. Dùng theo một trong ba cách:
 - **Chat trong Revit:** bấm **Chat AI**, chọn nhà cung cấp, nhập API key. Có Claude, OpenAI, Gemini, DeepSeek, Qwen, Kimi,
   GLM, MiniMax, OpenRouter, hoặc AI chạy trên máy (Ollama, LM Studio) không cần key.
