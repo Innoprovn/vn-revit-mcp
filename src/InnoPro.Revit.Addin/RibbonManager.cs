@@ -33,6 +33,8 @@ internal static class RibbonManager
             "Mở khung chat AI ngay trong Revit: Claude, OpenAI, Gemini, hoặc AI chạy trên máy (Ollama, LM Studio)."));
         panel.AddItem(Button("InnoPro.Mcp.Commands", "Lệnh\nAI", assembly, typeof(ShowCommandsCommand).FullName!, "≡",
             "Trạng thái kết nối, danh sách lệnh và lỗi nạp lệnh (nếu có)."));
+        panel.AddItem(Button("InnoPro.Mcp.Store", "Cửa hàng\nlệnh", assembly, typeof(StoreCommand).FullName!, "⊕",
+            "Duyệt và cài lệnh do cộng đồng đóng góp: xem mã, bấm Cài là có nút mới, không cần khởi động lại Revit."));
         // Nút bảo trì: nhỏ, xếp chồng cho gọn.
         panel.AddStackedItems(
             Button("InnoPro.Mcp.Toggle", "Bật/Tắt MCP", assembly, typeof(ToggleBridgeCommand).FullName!, "AI",
