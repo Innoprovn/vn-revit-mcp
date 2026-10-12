@@ -15,15 +15,16 @@ $staged = Join-Path $root "artifacts\addin\InnoPro.VnRevitMcp"
 
 & (Join-Path $PSScriptRoot "build.ps1")
 
+. (Join-Path $PSScriptRoot "HostHash.ps1")
+$hostHash = Get-HostSourceHash $root
+
 $hostChanged = $false
 foreach ($year in $RevitVersions) {
     $installed = Join-Path $env:APPDATA "Autodesk\Revit\Addins\$year\InnoPro.VnRevitMcp"
     if (-not (Test-Path $installed)) { continue }
 
-    foreach ($dll in Get-ChildItem $staged -Filter "InnoPro.*.dll") {
-        $target = Join-Path $installed $dll.Name
-        if (-not (Test-Path $target) -or (Get-FileHash $dll.FullName).Hash -ne (Get-FileHash $target).Hash) { $hostChanged = $true }
-    }
+    $hashFile = Join-Path $installed "host.hash"
+    if (-not (Test-Path $hashFile) -or (Get-Content $hashFile -Raw).Trim() -ne $hostHash) { $hostChanged = $true }
 
     $commands = Join-Path $installed "Commands"
     if (Test-Path $commands) { Remove-Item $commands -Recurse -Force }

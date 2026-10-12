@@ -1,0 +1,6 @@
+{
+  "name": "QA-QC",
+  "description": "Kiểm tra mô hình: cảnh báo Revit, phần tử trùng, tham số trống, va chạm.",
+  "author": "InnoPro",
+  "assemblies": [ "InnoPro.Revit.Commands.QaQc.dll" ]
+}

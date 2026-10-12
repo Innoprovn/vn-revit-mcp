@@ -1,0 +1,6 @@
+{
+  "name": "Modeling",
+  "description": "Dựng hình: tầng, lưới trục, tường, dầm, sàn, đặt family.",
+  "author": "InnoPro",
+  "assemblies": [ "InnoPro.Revit.Commands.Modeling.dll" ]
+}

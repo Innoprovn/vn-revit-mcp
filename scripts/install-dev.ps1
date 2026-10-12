@@ -23,6 +23,9 @@ if (Get-Process Revit -ErrorAction SilentlyContinue) {
 
 if (-not $SkipBuild) { & (Join-Path $PSScriptRoot "build.ps1") }
 
+. (Join-Path $PSScriptRoot "HostHash.ps1")
+$hostHash = Get-HostSourceHash $root
+
 $installed = @()
 foreach ($year in $RevitVersions) {
     if (-not (Test-Path "C:\Program Files\Autodesk\Revit $year\Revit.exe")) { continue }
@@ -33,6 +36,7 @@ foreach ($year in $RevitVersions) {
     if (Test-Path $target) { Remove-Item $target -Recurse -Force }
     Copy-Item (Join-Path $artifacts "addin\InnoPro.VnRevitMcp") $target -Recurse
     Copy-Item (Join-Path $artifacts "addin\InnoPro.VnRevitMcp.addin") $addins -Force
+    Set-Content (Join-Path $target "host.hash") $hostHash -Encoding ASCII
     $installed += $year
 }
 if ($installed.Count -eq 0) { throw "Không tìm thấy Revit 2025 trở lên trên máy." }

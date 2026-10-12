@@ -1,0 +1,6 @@
+{
+  "name": "Data",
+  "description": "Dữ liệu: đọc schedule, xuất CSV, khối lượng vật liệu.",
+  "author": "InnoPro",
+  "assemblies": [ "InnoPro.Revit.Commands.Data.dll" ]
+}
