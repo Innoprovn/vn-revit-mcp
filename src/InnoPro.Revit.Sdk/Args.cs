@@ -53,6 +53,38 @@ public static class Args
         return v.EnumerateArray().Select(e => new ElementId(ReadLong(e, name))).ToList();
     }
 
+    /// <summary>Đọc một mảng bắt buộc (ví dụ danh sách tường cần tạo).</summary>
+    public static IReadOnlyList<JsonElement> GetArray(JsonElement args, string name)
+    {
+        if (!Has(args, name)) throw Missing(name);
+        var v = Get(args, name);
+        if (v.ValueKind != JsonValueKind.Array) throw WrongType(name, "mảng");
+        return v.EnumerateArray().ToList();
+    }
+
+    /// <summary>Đọc mảng chuỗi, không có thì trả danh sách rỗng.</summary>
+    public static IReadOnlyList<string> GetStringsOrEmpty(JsonElement args, string name)
+    {
+        if (!Has(args, name)) return [];
+        var v = Get(args, name);
+        if (v.ValueKind != JsonValueKind.Array) throw WrongType(name, "mảng chuỗi");
+        return v.EnumerateArray().Select(e => e.ToString()).ToList();
+    }
+
+    /// <summary>
+    /// Đọc điểm {x, y, z} tính bằng mm (z mặc định 0) và đổi sang feet của Revit.
+    /// </summary>
+    public static XYZ GetPointMm(JsonElement args, string name)
+    {
+        if (!Has(args, name)) throw Missing(name);
+        var v = Get(args, name);
+        if (v.ValueKind != JsonValueKind.Object) throw WrongType(name, "điểm {x, y, z} tính bằng mm");
+        return new XYZ(
+            UnitConvert.MmToFeet(GetDoubleOrDefault(v, "x", double.NaN) is var x && !double.IsNaN(x) ? x : throw Missing($"{name}.x")),
+            UnitConvert.MmToFeet(GetDoubleOrDefault(v, "y", double.NaN) is var y && !double.IsNaN(y) ? y : throw Missing($"{name}.y")),
+            UnitConvert.MmToFeet(GetDoubleOrDefault(v, "z", 0)));
+    }
+
     private static JsonElement Get(JsonElement args, string name) => args.GetProperty(name);
 
     private static long ReadLong(JsonElement v, string name) => v.ValueKind switch
