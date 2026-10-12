@@ -1,4 +1,4 @@
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.DB;
 using InnoPro.Revit.Sdk;
 
 namespace InnoPro.Revit.Commands.ModelingCad.Common;
@@ -80,10 +80,11 @@ public static class TagMatcher
     }
 
     /// <summary>
-    /// Gán tag cho từng cấu kiện. Vòng 1: cặp hợp nhất hai chiều. Vòng 2: cấu kiện còn lại lấy chữ điểm tốt nhất
-    /// (được dùng chung), trừ chữ đã có leader chỉ rõ cấu kiện khác.
+    /// Gán tag cho từng cấu kiện. Vòng 1: cặp hợp nhất hai chiều. Vòng 2 (khi <paramref name="share"/>): cấu kiện còn lại
+    /// lấy chữ điểm tốt nhất, được dùng chung (một tag cho cả dải dầm), trừ chữ đã có leader chỉ rõ cấu kiện khác.
+    /// Cột, cửa: mỗi chữ chỉ một cấu kiện nên share = false; vòng 2 khi đó chỉ dùng chữ chưa ai nhận.
     /// </summary>
-    public static Dictionary<int, TextTag> Assign<T>(IReadOnlyList<T> items, IReadOnlyList<TextTag> tags, Func<T, TextTag, double?> score)
+    public static Dictionary<int, TextTag> Assign<T>(IReadOnlyList<T> items, IReadOnlyList<TextTag> tags, Func<T, TextTag, double?> score, bool share = true)
     {
         var scores = new List<(int Item, int Tag, double Score)>();
         for (var i = 0; i < items.Count; i++)
@@ -102,13 +103,19 @@ public static class TagMatcher
             if (best.Score <= LeaderScore * 1000) leaderOwned.Add(best.Tag);
         }
 
-        foreach (var (item, _) in bestForItem)
+        var used = result.Values.ToHashSet();
+        foreach (var (item, _) in bestForItem.OrderBy(kv => kv.Value.Score))
         {
             if (result.ContainsKey(item)) continue;
-            var pick = scores.Where(x => x.Item == item && (!leaderOwned.Contains(x.Tag) || x.Score <= LeaderScore * 1000))
+            var pick = scores.Where(x => x.Item == item && (share || !used.Contains(tags[x.Tag]))
+                                         && (!leaderOwned.Contains(x.Tag) || x.Score <= LeaderScore * 1000))
                 .OrderBy(x => x.Score).FirstOrDefault();
-            if (scores.Any(x => x.Item == item && x.Tag == pick.Tag && x.Score == pick.Score))
+            if (scores.Any(x => x.Item == item && x.Tag == pick.Tag && x.Score == pick.Score)
+                && (share || !used.Contains(tags[pick.Tag])))
+            {
                 result[item] = tags[pick.Tag];
+                used.Add(tags[pick.Tag]);
+            }
         }
         return result;
     }

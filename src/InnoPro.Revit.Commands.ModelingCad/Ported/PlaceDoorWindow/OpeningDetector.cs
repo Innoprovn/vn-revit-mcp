@@ -59,7 +59,7 @@ internal static class OpeningDetector
         {
             var halfAcross = item.Host?.Wall.Width / 2 ?? UnitUtils.ConvertToInternalUnits(150.0, UnitTypeId.Millimeters);
             return Common.TagMatcher.Point(tag, item.Candidate.Center, item.Candidate.Direction, item.Candidate.LengthFeet / 2, halfAcross, expandFeet);
-        });
+        }, share: false);
 
         return chosenAll.Select((item, i) => new OpeningInstance
         {

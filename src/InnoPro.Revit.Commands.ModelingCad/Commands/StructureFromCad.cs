@@ -93,7 +93,7 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
         var tags = StructureHelper.Tags(doc, cad, view, arguments, out var tagSource).Where(t => ColumnMark.IsMatch(t.Text)).ToList();
         var expand = ArgsX.Mm(arguments, "text_search_mm", 1000);
         var names = TagMatcher.Assign(columns, tags, (c, tag) =>
-            TagMatcher.Point(tag, c.Center, new XYZ(Math.Cos(c.AngleRadians), Math.Sin(c.AngleRadians), 0), c.LengthFeet / 2, c.WidthFeet / 2, expand));
+            TagMatcher.Point(tag, c.Center, new XYZ(Math.Cos(c.AngleRadians), Math.Sin(c.AngleRadians), 0), c.LengthFeet / 2, c.WidthFeet / 2, expand), share: false);
         string? NameOf(Column.RawColumn c) => names.TryGetValue(columns.IndexOf(c), out var t) ? t.Text : null;
 
         if (Args.GetBoolOrDefault(arguments, "dry_run", false))
