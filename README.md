@@ -69,6 +69,15 @@ claude mcp add vn-revit-mcp --scope user -- "%LOCALAPPDATA%\InnoPro\vn-revit-mcp
 
 Mở Revit, mở một dự án, rồi hỏi AI: *"Mô hình Revit đang mở có bao nhiêu phần tử?"*
 
+**Sửa lệnh không cần tắt Revit:** CommandSet được nạp từ bộ nhớ nên không khóa file. Sau khi sửa mã lệnh:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\dev-reload.ps1
+```
+
+Script build, chép CommandSet vào bản đã cài và bảo Revit đang chạy nạp lại (hoặc bấm **Nạp lại lệnh** trên tab InnoPro,
+hoặc để AI gọi tool `reload_commands`). Chỉ khi sửa phần lõi (Addin, Sdk, Bridge) mới cần đóng Revit và chạy `install-dev.ps1`.
+
 Với client khác, khai báo MCP server kiểu **stdio** với command là đường dẫn `vn-revit-mcp.exe` ở trên.
 Mở nhiều phiên Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
 

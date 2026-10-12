@@ -24,6 +24,20 @@ public sealed class ToggleBridgeCommand : IExternalCommand
 }
 
 [Transaction(TransactionMode.ReadOnly)]
+public sealed class ReloadCommandsCommand : IExternalCommand
+{
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+    {
+        var app = App.Instance;
+        if (app == null) return Result.Failed;
+
+        var count = app.ReloadCommands();
+        TaskDialog.Show("InnoPro MCP", $"Đã nạp lại: {count} lệnh. Lỗi nạp (nếu có) ghi trong log.");
+        return Result.Succeeded;
+    }
+}
+
+[Transaction(TransactionMode.ReadOnly)]
 public sealed class ShowCommandsCommand : IExternalCommand
 {
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)

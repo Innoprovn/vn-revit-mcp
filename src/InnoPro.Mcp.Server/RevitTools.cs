@@ -1,6 +1,7 @@
 using System.Text.Json;
 using InnoPro.Bridge;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace InnoPro.Mcp.Server;
 
@@ -11,6 +12,9 @@ namespace InnoPro.Mcp.Server;
 public sealed class RevitTools(RevitBridgeClient bridge)
 {
     private const string StatusTool = "revit_status";
+    private const string ReloadTool = "reload_commands";
+
+    private static readonly JsonElement EmptySchema = JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement;
 
     private static readonly string ManifestFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "InnoPro", "vn-revit-mcp", "commands.json");
@@ -26,7 +30,13 @@ public sealed class RevitTools(RevitBridgeClient bridge)
             {
                 Name = StatusTool,
                 Description = "Kiểm tra kết nối tới Revit: phiên bản Revit, tài liệu đang mở, số lệnh có sẵn. Gọi đầu tiên khi lệnh khác báo lỗi kết nối.",
-                InputSchema = JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement,
+                InputSchema = EmptySchema,
+            },
+            new()
+            {
+                Name = ReloadTool,
+                Description = "Nạp lại các CommandSet trong Revit sau khi cập nhật DLL lệnh, không cần khởi động lại Revit. Danh sách tool được làm mới sau đó.",
+                InputSchema = EmptySchema,
             },
         };
 
@@ -36,7 +46,7 @@ public sealed class RevitTools(RevitBridgeClient bridge)
             {
                 Name = command.Name,
                 Description = $"[{command.Category}] {command.Description}" +
-                              (command.TransactionMode == "None" ? "" : " (Sửa mô hình; có thể Undo trong Revit.)"),
+                              (command.TransactionMode == "Auto" ? " (Sửa mô hình; có thể Undo trong Revit.)" : ""),
                 InputSchema = command.InputSchema,
             });
         }
@@ -44,15 +54,21 @@ public sealed class RevitTools(RevitBridgeClient bridge)
         return new ListToolsResult { Tools = tools };
     }
 
-    public async Task<CallToolResult> CallAsync(string name, IDictionary<string, JsonElement>? arguments, CancellationToken token)
+    public async Task<CallToolResult> CallAsync(McpServer server, string name, IDictionary<string, JsonElement>? arguments, CancellationToken token)
     {
         try
         {
-            var result = name == StatusTool
-                ? await bridge.SendAsync(BridgeProtocol.MethodPing, null, QuickTimeout, token)
-                : await bridge.SendAsync(BridgeProtocol.MethodInvoke,
+            var result = name switch
+            {
+                StatusTool => await bridge.SendAsync(BridgeProtocol.MethodPing, null, QuickTimeout, token),
+                ReloadTool => await bridge.SendAsync(BridgeProtocol.MethodReloadCommands, null, InvokeTimeout, token),
+                _ => await bridge.SendAsync(BridgeProtocol.MethodInvoke,
                     new InvokeParams(name, JsonSerializer.SerializeToElement(arguments ?? new Dictionary<string, JsonElement>())),
-                    InvokeTimeout, token);
+                    InvokeTimeout, token),
+            };
+
+            if (name == ReloadTool)
+                await server.SendNotificationAsync(NotificationMethods.ToolListChangedNotification, token);
 
             return Text(result.ValueKind == JsonValueKind.Undefined ? "OK" : result.GetRawText(), isError: false);
         }

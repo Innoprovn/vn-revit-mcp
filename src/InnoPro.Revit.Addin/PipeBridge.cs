@@ -12,14 +12,16 @@ internal sealed class PipeBridge
 {
     private static readonly TimeSpan InvokeTimeout = TimeSpan.FromMinutes(2);
 
-    private readonly CommandRegistry _registry;
+    private readonly Func<CommandRegistry> _registry;
+    private readonly Func<int> _reload;
     private readonly RevitDispatcher _dispatcher;
     private readonly Func<RevitStatus> _status;
     private CancellationTokenSource? _cts;
 
-    public PipeBridge(CommandRegistry registry, RevitDispatcher dispatcher, Func<RevitStatus> status)
+    public PipeBridge(Func<CommandRegistry> registry, Func<int> reload, RevitDispatcher dispatcher, Func<RevitStatus> status)
     {
         _registry = registry;
+        _reload = reload;
         _dispatcher = dispatcher;
         _status = status;
     }
@@ -105,7 +107,8 @@ internal sealed class PipeBridge
             return request.Method switch
             {
                 BridgeProtocol.MethodPing => Ok(request, _status()),
-                BridgeProtocol.MethodListCommands => Ok(request, Describe()),
+                BridgeProtocol.MethodListCommands => Ok(request, DescribeCommands(_registry())),
+                BridgeProtocol.MethodReloadCommands => Ok(request, new { command_count = _reload() }),
                 BridgeProtocol.MethodInvoke => await Invoke(request, token),
                 _ => Fail(request.Id, $"Không hỗ trợ phương thức '{request.Method}'."),
             };
@@ -120,7 +123,7 @@ internal sealed class PipeBridge
     {
         var invoke = request.Params?.Deserialize<InvokeParams>(BridgeProtocol.Json)
                      ?? throw new InvalidDataException("Thiếu params.");
-        if (!_registry.TryGet(invoke.Name, out var loaded))
+        if (!_registry().TryGet(invoke.Name, out var loaded))
             return Fail(request.Id, $"Không có lệnh '{invoke.Name}'.");
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -139,8 +142,6 @@ internal sealed class PipeBridge
                 "Revit không phản hồi kịp. Có thể Revit đang bận hoặc đang mở một hộp thoại; hãy đóng hộp thoại rồi thử lại.");
         }
     }
-
-    private List<CommandDescriptor> Describe() => DescribeCommands(_registry);
 
     public static List<CommandDescriptor> DescribeCommands(CommandRegistry registry) => registry.Commands
         .OrderBy(c => c.Command.Category).ThenBy(c => c.Command.Name)

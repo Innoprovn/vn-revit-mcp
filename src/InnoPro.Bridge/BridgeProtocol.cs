@@ -15,6 +15,7 @@ public static class BridgeProtocol
     public const string MethodPing = "ping";
     public const string MethodListCommands = "list_commands";
     public const string MethodInvoke = "invoke";
+    public const string MethodReloadCommands = "reload_commands";
 
     public static readonly Encoding Encoding = new UTF8Encoding(false);
 

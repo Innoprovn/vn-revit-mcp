@@ -24,6 +24,8 @@ internal static class Ribbon
             "Bật hoặc tắt kết nối cho AI (MCP). Khi tắt, không AI nào điều khiển được Revit.");
         AddButton(panel, assembly, "InnoPro.Mcp.Commands", "Lệnh\nAI", typeof(ShowCommandsCommand), "≡",
             "Xem trạng thái kết nối và danh sách lệnh AI đang có.");
+        AddButton(panel, assembly, "InnoPro.Mcp.Reload", "Nạp lại\nlệnh", typeof(ReloadCommandsCommand), "↻",
+            "Nạp lại các CommandSet từ đĩa sau khi cập nhật, không cần khởi động lại Revit.");
     }
 
     private static void AddButton(RibbonPanel panel, string assembly, string id, string text, Type command, string glyph, string tooltip)

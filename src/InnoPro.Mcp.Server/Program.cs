@@ -21,6 +21,8 @@ builder.Services
             Version = typeof(RevitTools).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "0.0.0",
         };
+        // Báo client biết danh sách tool có thể đổi (sau reload_commands).
+        options.Capabilities = new ServerCapabilities { Tools = new ToolsCapability { ListChanged = true } };
         options.ServerInstructions =
             "Điều khiển Autodesk Revit (2025+) qua add-in InnoPro. Chiều dài dùng milimét. " +
             "Nếu lệnh báo lỗi kết nối, gọi revit_status và hướng dẫn người dùng mở Revit, bật nút MCP trên tab InnoPro.";
@@ -28,6 +30,6 @@ builder.Services
     .WithStdioServerTransport()
     .WithListToolsHandler((request, token) => new ValueTask<ListToolsResult>(tools.ListAsync(token)))
     .WithCallToolHandler((request, token) =>
-        new ValueTask<CallToolResult>(tools.CallAsync(request.Params!.Name, request.Params.Arguments, token)));
+        new ValueTask<CallToolResult>(tools.CallAsync(request.Server, request.Params!.Name, request.Params.Arguments, token)));
 
 await builder.Build().RunAsync();
