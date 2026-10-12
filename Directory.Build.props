@@ -1,16 +1,16 @@
-<Project>
+﻿<Project>
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Authors>InnoPro</Authors>
     <Company>InnoPro</Company>
     <Product>vn-revit-mcp</Product>
     <Copyright>Copyright (C) 2026 InnoPro</Copyright>
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/Innoprovn/vn-revit-mcp</RepositoryUrl>
-    <!-- Phiên bản Revit API dùng để build. Revit 2025 và 2026 cùng chạy .NET 8. -->
+    <!-- PhiÃªn báº£n Revit API dÃ¹ng Ä‘á»ƒ build. Revit 2025 vÃ  2026 cÃ¹ng cháº¡y .NET 8. -->
     <RevitApiVersion>2025.4.60</RevitApiVersion>
   </PropertyGroup>
 </Project>
