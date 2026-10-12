@@ -1,0 +1,6 @@
+{
+  "name": "Docs",
+  "description": "Bản vẽ (tạo sheet, đặt view, nhân bản view, view template, tag, kích thước trục), kiểm tra mô hình và model link, xuất PDF và danh sách sheet.",
+  "author": "InnoPro",
+  "assemblies": [ "InnoPro.Revit.Commands.Docs.dll" ]
+}

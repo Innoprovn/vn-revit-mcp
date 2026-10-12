@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Description>CommandSet Modeling-CAD của vn-revit-mcp: dựng tường, sàn, cột, dầm, cọc, cửa từ bản vẽ CAD và các công cụ dựng hình bổ trợ.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SDK do host cung cấp lúc chạy, không chép kèm CommandSet. -->
+    <ProjectReference Include="..\InnoPro.Revit.Sdk\InnoPro.Revit.Sdk.csproj" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="commandset.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

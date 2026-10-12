@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Description>CommandSet Rebar của vn-revit-mcp: thống kê, chọn nhanh, kiểm tra và chỉnh sửa cốt thép.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- System.Drawing (ImageType.GetImage trả Bitmap) có sẵn trong Windows Desktop runtime mà Revit dùng. -->
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SDK do host cung cấp lúc chạy, không chép kèm CommandSet. -->
+    <ProjectReference Include="..\InnoPro.Revit.Sdk\InnoPro.Revit.Sdk.csproj" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="commandset.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\Ui\*.cs" Link="Ui\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

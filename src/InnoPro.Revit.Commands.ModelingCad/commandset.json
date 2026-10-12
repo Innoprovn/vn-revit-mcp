@@ -1,0 +1,6 @@
+{
+  "name": "Modeling-CAD",
+  "description": "Dựng hình từ bản vẽ CAD (tường, sàn, cột, dầm, cọc, cửa) và công cụ dựng hình bổ trợ.",
+  "author": "InnoPro",
+  "assemblies": [ "InnoPro.Revit.Commands.ModelingCad.dll" ]
+}

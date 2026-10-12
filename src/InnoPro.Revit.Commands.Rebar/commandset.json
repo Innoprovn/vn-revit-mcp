@@ -1,0 +1,6 @@
+{
+  "name": "Rebar",
+  "description": "Cốt thép: thống kê, chọn nhanh, ngắt/nối host, dịch thép theo hệ trục local, né va chạm, khối cover, kiểm tra chất lượng.",
+  "author": "InnoPro",
+  "assemblies": [ "InnoPro.Revit.Commands.Rebar.dll" ]
+}
