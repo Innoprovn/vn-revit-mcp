@@ -55,7 +55,7 @@ public sealed class FindElements : RevitCommandBase
         }
 
         if (!Args.Has(arguments, "category") && !Args.Has(arguments, "in_active_view") && !Args.Has(arguments, "level"))
-            elements = elements.Where(e => e.Category is { CategoryType: CategoryType.Model });
+            elements = elements.Where(ElementInfo.IsPhysical);
 
         var limit = (int)Args.GetLongOrDefault(arguments, "limit", 200);
         var list = elements.ToList();

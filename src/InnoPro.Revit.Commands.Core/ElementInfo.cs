@@ -13,6 +13,16 @@ internal static class ElementInfo
         level = LevelName(doc, e),
     };
 
+    /// <summary>
+    /// Cấu kiện thật trong mô hình: category kiểu Model, không thuộc riêng một view,
+    /// bỏ qua sketch, vật liệu, sun path... (Revit cũng xếp chúng vào category Model).
+    /// </summary>
+    public static bool IsPhysical(Element e) =>
+        e.Category is { CategoryType: CategoryType.Model } category
+        && !category.Name.StartsWith('<')
+        && !e.ViewSpecific
+        && e is not (Material or PropertySetElement or AppearanceAssetElement or SunAndShadowSettings or ElementType);
+
     public static string? TypeName(Document doc, Element e)
     {
         var typeId = e.GetTypeId();

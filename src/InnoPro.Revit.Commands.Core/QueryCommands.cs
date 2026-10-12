@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Autodesk.Revit.DB;
 using InnoPro.Revit.Sdk;
 
@@ -160,7 +160,7 @@ public sealed class AnalyzeModelStatistics : RevitCommandBase
         var top = (int)Args.GetLongOrDefault(arguments, "top", 30);
         var groups = new FilteredElementCollector(context.Document)
             .WhereElementIsNotElementType()
-            .Where(e => e.Category is { CategoryType: CategoryType.Model })
+            .Where(ElementInfo.IsPhysical)
             .GroupBy(e => e.Category.Name)
             .Select(g => new { category = g.Key, count = g.Count() })
             .OrderByDescending(x => x.count)
