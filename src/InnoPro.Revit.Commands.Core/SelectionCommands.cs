@@ -81,3 +81,31 @@ public sealed class OpenView : RevitCommandBase
         return new { view_id = target.Id.Value, name = target.Name, view_type = target.ViewType.ToString() };
     }
 }
+
+public sealed class DeleteElements : RevitCommandBase
+{
+    public override string Name => "delete_elements";
+    public override string Category => "Giao diện";
+    public override TransactionMode TransactionMode => TransactionMode.Auto;
+    public override string Description =>
+        "Xóa phần tử theo id (một lần Undo hoàn tác được). Trả số phần tử đã xóa, kể cả phần tử phụ thuộc bị xóa theo.";
+    public override string InputSchema => """
+        {
+          "type": "object",
+          "properties": {
+            "element_ids": { "type": "array", "items": { "type": "integer" }, "description": "Id phần tử cần xóa." }
+          },
+          "required": ["element_ids"]
+        }
+        """;
+
+    public override object? Execute(RevitCommandContext context, JsonElement arguments)
+    {
+        var doc = context.Document;
+        var requested = Args.GetElementIds(arguments, "element_ids");
+        var found = requested.Where(id => doc.GetElement(id) != null).ToList();
+        if (found.Count == 0) throw new CommandException("Không có phần tử nào trong danh sách id.");
+        var deleted = doc.Delete(found);
+        return new { requested = requested.Count, deleted = deleted.Count, missing_ids = requested.Except(found).Select(id => id.Value).ToList() };
+    }
+}

@@ -18,4 +18,10 @@ internal static class TextTagReader
         new(@"^\s*\d+\s*[xX×]\s*\d+\s*(mm)?\s*$", RegexOptions.Compiled);
 
     public static bool IsDimension(string text) => DimensionPattern.IsMatch(text);
+
+    /// <summary>Ký hiệu cửa: bắt đầu bằng chữ, không khoảng trắng, 2–10 ký tự (D1, Đ1, FF1, WF2a, CS-01).
+    /// Loại cao độ "-20", số đếm, tên phòng "NGỦ 1", ghi chú dài.</summary>
+    private static readonly Regex MarkPattern = new(@"^\p{L}[\p{L}\d\-._/]{1,9}$", RegexOptions.Compiled);
+
+    public static bool IsMark(string text) => MarkPattern.IsMatch(text.Trim());
 }

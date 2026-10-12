@@ -62,8 +62,10 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
         var layers = Cad.Layers(arguments, scan.ColumnsByLayer.Keys);
         var columns = layers.SelectMany(l => scan.ColumnsByLayer[l]).ToList();
 
+        var columnFamily = ArgsX.FamilyWithBh(doc, arguments, "column_family", BuiltInCategory.OST_StructuralColumns);
         var choices = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_StructuralColumns)
             .OfClass(typeof(FamilySymbol)).Cast<FamilySymbol>()
+            .Where(s => columnFamily == null || s.Family.Id == columnFamily.Id)
             .Select(s => new Column.SymbolChoice(s, Lookup.FullName(s))).ToList();
         var groups = Column.ColumnPlacer.GroupColumns(columns, choices);
 
@@ -87,9 +89,8 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
         var typeErrors = new List<string>();
         if (groups.Any(g => !g.IsExactMatch))
         {
-            var family = ArgsX.FamilyWithBh(doc, arguments, "column_family", BuiltInCategory.OST_StructuralColumns);
-            if (family != null)
-                typeErrors.AddRange(Column.ColumnPlacer.CreateMissingTypes(doc, groups, family).Errors);
+            if (columnFamily != null)
+                typeErrors.AddRange(Column.ColumnPlacer.CreateMissingTypes(doc, groups, columnFamily).Errors);
             else if (groups.Any(g => g.SelectedType == null))
                 throw new CommandException("Dự án chưa có family cột kết cấu có tham số b, h để tạo type theo CAD. " +
                                            "Load một family cột chữ nhật (ví dụ M_Concrete-Rectangular-Column) rồi chạy lại, hoặc truyền type_map.");
@@ -150,13 +151,13 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
         var scan = Beam.CadBeamScanner.Scan(doc, cad, view);
         foreach (var (beam, layerName) in Beam.BeamOrphanRepairer.Repair(scan.RawSegmentsByLayer, scan.Orphans))
             if (scan.BeamsByLayer.TryGetValue(layerName, out var list)) list.Add(beam);
+        var layers = Cad.Layers(arguments, scan.BeamsByLayer.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key));
+        var beams = SizeTags.RemoveOverlaps(layers.SelectMany(l => scan.BeamsByLayer[l]), x => (x.Start, x.End, x.WidthFeet));
         var tags = StructureHelper.Tags(doc, cad, view, arguments, out var tagSource);
-        var tagged = SizeTags.Attach(scan.BeamsByLayer.Values.SelectMany(l => l).ToList(), b => (b.Start, b.End, b.WidthFeet),
+        var tagged = SizeTags.Attach(beams, b => (b.Start, b.End, b.WidthFeet),
             (b, name, bMm, hMm) => { b.TagName = name; b.TagBMm = bMm; b.TagHMm = hMm; },
             tags, ArgsX.Mm(arguments, "text_search_mm", SizeTags.DefaultSearchExpandMm));
 
-        var layers = Cad.Layers(arguments, scan.BeamsByLayer.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key));
-        var beams = layers.SelectMany(l => scan.BeamsByLayer[l]).ToList();
         var extended = 0;
         if (Args.GetBoolOrDefault(arguments, "extend_to_columns", true))
         {
@@ -165,8 +166,12 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
             extended = extension.ExtendedBeamCount;
         }
 
+        // Có family dầm (chỉ định hoặc tự chọn family có b, h) thì chỉ chọn type trong family đó, tránh khớp nhầm
+        // sang family khác cùng b×h (dầm sườn, dầm thép...); type thiếu sẽ được tạo.
+        var beamFamily = ArgsX.FamilyWithBh(doc, arguments, "beam_family", BuiltInCategory.OST_StructuralFraming);
         var choices = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_StructuralFraming)
             .OfClass(typeof(FamilySymbol)).Cast<FamilySymbol>()
+            .Where(s => beamFamily == null || s.Family.Id == beamFamily.Id)
             .Select(s => new Beam.SymbolChoice(s, Lookup.FullName(s))).ToList();
         var groups = Beam.BeamPlacer.GroupBeams(beams, choices);
         var includeUntagged = Args.GetBoolOrDefault(arguments, "include_untagged", false);
@@ -203,9 +208,8 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
 
         var typeErrors = new List<string>();
         // Tự tạo type thiếu khi biết đủ b x h (đọc từ Text); family lấy theo beam_family hoặc family đầu tiên có b, h.
-        if (groups.Any(g => !g.IsExactMatch && g.ShouldModel && g.SizeHMm != null)
-            && ArgsX.FamilyWithBh(doc, arguments, "beam_family", BuiltInCategory.OST_StructuralFraming) is { } family)
-            typeErrors.AddRange(Beam.BeamPlacer.CreateMissingTypes(doc, groups, family).Errors);
+        if (groups.Any(g => !g.IsExactMatch && g.ShouldModel && g.SizeHMm != null) && beamFamily != null)
+            typeErrors.AddRange(Beam.BeamPlacer.CreateMissingTypes(doc, groups, beamFamily).Errors);
 
         var summary = Beam.BeamPlacer.Place(doc, groups, level, Args.GetStringOrDefault(arguments, "tag_parameter"));
         return new
@@ -269,13 +273,13 @@ public sealed class PlaceStructuralWallsFromCad : RevitCommandBase
         var scan = SWall.CadWallScanner.Scan(doc, cad, view, 0.0, minPairLengthRatio);
         foreach (var (wall, layerName) in SWall.WallOrphanRepairer.Repair(scan.RawSegmentsByLayer, scan.Orphans, minPairLengthRatio))
             if (scan.WallsByLayer.TryGetValue(layerName, out var list)) list.Add(wall);
+        var layers = Cad.Layers(arguments, scan.WallsByLayer.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key));
+        var walls = SizeTags.RemoveOverlaps(layers.SelectMany(l => scan.WallsByLayer[l]), x => (x.Start, x.End, x.WidthFeet));
         var tags = StructureHelper.Tags(doc, cad, view, arguments, out var tagSource);
-        var tagged = SizeTags.Attach(scan.WallsByLayer.Values.SelectMany(l => l).ToList(), w => (w.Start, w.End, w.WidthFeet),
+        var tagged = SizeTags.Attach(walls, w => (w.Start, w.End, w.WidthFeet),
             (w, name, bMm, hMm) => { w.TagName = name; w.TagBMm = bMm; w.TagHMm = hMm; },
             tags, ArgsX.Mm(arguments, "text_search_mm", SizeTags.DefaultSearchExpandMm));
 
-        var layers = Cad.Layers(arguments, scan.WallsByLayer.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key));
-        var walls = layers.SelectMany(l => scan.WallsByLayer[l]).ToList();
         var unsupported = 0;
         if (Args.GetBoolOrDefault(arguments, "require_support", false))
         {

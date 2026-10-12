@@ -1,4 +1,4 @@
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 
 namespace InnoPro.Revit.Commands.ModelingCad.PlaceBeam;
@@ -37,17 +37,19 @@ internal static class BeamPlacer
         var beamList = beams.ToList();
         var groups = new List<BeamGroup>();
 
+        // Cùng tên nhưng khác tiết diện (vd D1X-5 nhịp 200x600 và nhịp 200x350) là các nhóm riêng.
         foreach (var byName in beamList
                      .Where(b => b.TagName is not null)
-                     .GroupBy(b => b.TagName!, StringComparer.OrdinalIgnoreCase))
+                     .GroupBy(b => (Name: b.TagName!.ToUpperInvariant(),
+                         B: RoundTo5(UnitUtils.ConvertFromInternalUnits(b.WidthFeet, UnitTypeId.Millimeters)), H: b.TagHMm ?? 0)))
         {
             var first = byName.First();
-            var bMm = RoundTo5(UnitUtils.ConvertFromInternalUnits(first.WidthFeet, UnitTypeId.Millimeters));
+            var bMm = byName.Key.B;
             var hMm = first.TagHMm!.Value;
 
             var group = new BeamGroup
             {
-                TagName = byName.Key,
+                TagName = first.TagName,
                 SizeBMm = bMm,
                 SizeHMm = hMm,
                 Beams = byName.ToList(),

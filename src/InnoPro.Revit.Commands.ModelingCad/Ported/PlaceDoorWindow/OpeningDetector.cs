@@ -23,6 +23,7 @@ namespace InnoPro.Revit.Commands.ModelingCad.PlaceDoorWindow;
 internal static class OpeningDetector
 {
     private const double AngleToleranceDegrees = 2.0;
+    private static readonly double MinOpeningFeet = UnitUtils.ConvertToInternalUnits(300.0, UnitTypeId.Millimeters);
     private static readonly double DoorTouchToleranceFeet =
         UnitUtils.ConvertToInternalUnits(5.0, UnitTypeId.Millimeters);
     private static readonly double MinSegmentLengthFeet =
@@ -42,6 +43,9 @@ internal static class OpeningDetector
             chosenAll.AddRange(withHost.Count > 0 ? withHost : resolved.Take(1));
         }
 
+        // Lỗ mở hẹp hơn 300 mm không phải cửa (nét vụn, ký hiệu khác trên layer cửa).
+        chosenAll.RemoveAll(x => x.Candidate.LengthFeet < MinOpeningFeet);
+
         // Ký hiệu cửa có thể sinh thêm ứng viên không host (nét cánh mở, cụm tách rời); bỏ ứng viên không host
         // nằm chồng lên một lỗ mở đã khớp tường.
         var hosted = chosenAll.Where(x => x.Host != null).ToList();
@@ -50,7 +54,7 @@ internal static class OpeningDetector
 
         // Tên cửa: vùng chữ nhật dọc theo lỗ mở (theo hướng tường), leader chỉ vào lỗ là chắc chắn;
         // bỏ chữ kích thước "2000x2700" thường đặt sát tên.
-        var names = tags.Where(t => !TextTagReader.IsDimension(t.Text)).ToList();
+        var names = tags.Where(t => !TextTagReader.IsDimension(t.Text) && TextTagReader.IsMark(t.Text)).ToList();
         var assigned = Common.TagMatcher.Assign(chosenAll, names, (item, tag) =>
         {
             var halfAcross = item.Host?.Wall.Width / 2 ?? UnitUtils.ConvertToInternalUnits(150.0, UnitTypeId.Millimeters);

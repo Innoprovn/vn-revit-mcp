@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.Json;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
@@ -61,6 +61,7 @@ public sealed class App : IExternalApplication
             application.ViewActivated += OnViewActivated;
             // Dự phòng: có lúc Revit chậm xử lý ExternalEvent (đang nạp mô hình...); Idling chạy hàng đợi khi rảnh.
             application.Idling += OnIdling;
+            application.ControlledApplication.FailuresProcessing += CommandRunner.OnFailuresProcessing;
             application.ControlledApplication.DocumentOpened += (_, _) => Interlocked.Increment(ref _openDocuments);
             application.ControlledApplication.DocumentCreated += (_, _) => Interlocked.Increment(ref _openDocuments);
             application.ControlledApplication.DocumentClosed += (_, _) => Interlocked.Decrement(ref _openDocuments);

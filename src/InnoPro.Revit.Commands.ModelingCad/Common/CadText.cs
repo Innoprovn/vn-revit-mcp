@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using ACadSharp;
 using ACadSharp.Entities;
 using ACadSharp.IO;
@@ -71,7 +71,7 @@ public static class CadText
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                parts.Add($"CAD: lỗi đọc file ({ex.GetType().Name}: {ex.Message})");
+                parts.Add($"CAD: không đọc được chữ trong file ({ex.GetType().Name}); mở file bằng AutoCAD và Save As lại, hoặc explode chữ thành Text Note");
             }
         }
 
@@ -135,7 +135,9 @@ public static class CadText
                     break;
                 case MultiLeader ml when ml.ContextData is { } ctx:
                 {
-                    var label = Clean(StripFormat(ctx.TextLabel ?? ""));
+                    var raw = ctx.TextLabel ?? "";
+                    var inline = Regex.Match(raw, @"\\[fF]([^|;]+)");
+                    var label = Clean(VnLegacy.Decode(StripFormat(raw), VnLegacy.Detect(inline.Success ? inline.Groups[1].Value : Font(ctx.TextStyle), raw)));
                     var tips = ctx.LeaderRoots.SelectMany(r => r.Lines).Where(l => l.Points.Count > 0)
                         .Select(l => (l.Points[0].X, l.Points[0].Y)).ToList();
                     if (label.Length > 0)
@@ -174,9 +176,13 @@ public static class CadText
         }
     }
 
+    /// <summary>Font của kiểu chữ (tên file font hoặc tên kiểu) để nhận bảng mã tiếng Việt cũ.</summary>
+    private static string? Font(ACadSharp.Tables.TextStyle? style) =>
+        style == null ? null : string.IsNullOrWhiteSpace(style.Filename) ? style.Name : style.Filename;
+
     private static void AddText(List<RawText> texts, Ent.TextEntity t)
     {
-        var text = Clean(t.Value);
+        var text = Clean(VnLegacy.Decode(t.Value ?? "", VnLegacy.Detect(Font(t.Style), t.Value ?? "")));
         if (text.Length == 0 || t.Height <= 0) return;
         var (dx, dy) = (Math.Cos(t.Rotation), Math.Sin(t.Rotation));
         var length = text.Length * t.Height * 0.7 * (t.WidthFactor > 0 ? t.WidthFactor : 1);
@@ -201,7 +207,10 @@ public static class CadText
 
     private static void AddMText(List<RawText> texts, MText m)
     {
-        var lines = m.GetPlainTextLines().Select(Clean).Where(l => l.Length > 0).ToList();
+        // MTEXT có thể đổi font ngay trong chuỗi (VNI-Times|...).
+        var inline = Regex.Match(m.Value ?? "", @"\\[fF]([^|;]+)");
+        var encoding = VnLegacy.Detect(inline.Success ? inline.Groups[1].Value : Font(m.Style), m.Value ?? "");
+        var lines = m.GetPlainTextLines().Select(l => Clean(VnLegacy.Decode(l, encoding))).Where(l => l.Length > 0).ToList();
         if (lines.Count == 0 || m.Height <= 0) return;
         var text = string.Join(" ", lines);
         var dir = m.AlignmentPoint.X != 0 || m.AlignmentPoint.Y != 0

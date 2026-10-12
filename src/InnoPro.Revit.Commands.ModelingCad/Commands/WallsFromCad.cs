@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Autodesk.Revit.DB;
 using InnoPro.Revit.Commands.ModelingCad.Common;
 using InnoPro.Revit.Commands.ModelingCad.WallFromCad;
@@ -69,8 +69,12 @@ public sealed class CreateWallsFromCad : RevitCommandBase
         var wallTypes = new FilteredElementCollector(doc).OfClass(typeof(WallType)).Cast<WallType>()
             .Where(t => t.Kind == WallKind.Basic).ToList();
         var typeMap = ArgsX.StringMap(arguments, "wall_types");
+        // Nét CAD lệch vài mm (97, 103, 203...) gộp về bề dày phổ biến gần nhất trong phạm vi 5 mm.
+        var counts = detection.Candidates.GroupBy(c => (int)c.ThicknessMm).ToDictionary(g => g.Key, g => g.Count());
+        int Snap(int t) => counts.Where(kv => Math.Abs(kv.Key - t) <= 5 && kv.Value > counts[t])
+            .OrderByDescending(kv => kv.Value).Select(kv => kv.Key).DefaultIfEmpty(t).First();
         var buckets = detection.Candidates
-            .GroupBy(c => (int)c.ThicknessMm)
+            .GroupBy(c => Snap((int)c.ThicknessMm))
             .OrderBy(g => g.Key)
             .Select(g =>
             {
