@@ -10,7 +10,7 @@ public sealed class RebarQaCheck : RevitCommandBase
 {
     public override string Name => "rebar_qa_check";
     public override string Category => "Rebar";
-    public override RibbonButton? Ribbon => new("QA thép", "✓");
+    public override RibbonButton? Ribbon => new("QA thép", "check");
     public override string Description =>
         "Kiểm tra thép: thanh chồng lên nhau (khoảng cách tâm nhỏ hơn tổng bán kính) và thanh nằm ngoài bê tông, theo từng thanh trong set.";
     public override string InputSchema => """

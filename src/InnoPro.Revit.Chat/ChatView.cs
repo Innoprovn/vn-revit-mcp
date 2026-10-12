@@ -75,14 +75,14 @@ internal sealed class ChatView : UserControl
 
         var top = new StackPanel { Margin = new Thickness(8, 8, 8, 4) };
         var row = new DockPanel();
-        foreach (var (glyph, tip, action) in new (string, string, Action)[]
+        foreach (var (icon, tip, action) in new (string, string, Action)[]
                  {
-                     ("＋", "Cuộc trò chuyện mới", () => { _engine.Reset(); _transcript.Children.Clear(); _status.Text = ""; }),
-                     ("🔑", "API key", EditKey),
-                     ("↻", "Tải danh sách model", async () => await LoadModels()),
+                     ("plus", "Cuộc trò chuyện mới", () => { _engine.Reset(); _transcript.Children.Clear(); _status.Text = ""; ShowWelcome(); }),
+                     ("key", "API key", EditKey),
+                     ("reload", "Tải danh sách model", async () => await LoadModels()),
                  })
         {
-            var b = new Button { Content = glyph, ToolTip = tip, Style = (Style)FindResource("Icon"), Margin = new Thickness(2, 0, 0, 0) };
+            var b = new Button { Content = Icons.Shape(icon, 15), ToolTip = tip, Style = (Style)FindResource("Icon"), Margin = new Thickness(2, 0, 0, 0) };
             b.Click += (_, _) => action();
             DockPanel.SetDock(b, Dock.Right);
             row.Children.Add(b);
@@ -204,14 +204,39 @@ internal sealed class ChatView : UserControl
         TrySaveSettings();
 
         var key = CredentialStore.Read(preset.Id);
-        if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = "Cần API key: bấm 🔑"; return; }
-        if (model.Length == 0) { _status.Text = "Chọn model: bấm ↻"; return; }
+        if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = "Cần API key"; ShowWelcome(); return; }
+        if (model.Length == 0) { _status.Text = "Chọn model (nút tải danh sách)"; ShowWelcome(); return; }
 
         _engine.Use(preset.IsAnthropic
             ? new AnthropicProvider(key!, model)
             : new OpenAiCompatibleProvider(_settings.BaseUrlFor(preset), key, model));
         _providerReady = true;
         _status.Text = preset.Local ? $"{model} · trên máy" : model;
+        ShowWelcome();
+    }
+
+    /// <summary>Hướng dẫn 3 bước khi chưa có tin nhắn; tự biến mất khi bắt đầu hỏi.</summary>
+    private void ShowWelcome()
+    {
+        if (_transcript.Children.Count > 0 && _transcript.Children[0] is not FrameworkElement { Tag: "welcome" }) return;
+        _transcript.Children.Clear();
+        var preset = Preset;
+        var steps = new (string Icon, string Text, bool Done)[]
+        {
+            ("chat", "Chọn AI ở ô phía trên", true),
+            ("key", preset.NeedsKey ? "Nhập API key (nút chìa khóa)" : "Không cần API key", !preset.NeedsKey || !string.IsNullOrEmpty(CredentialStore.Read(preset.Id))),
+            ("send", "Hỏi bằng tiếng Việt, Enter để gửi", _providerReady),
+        };
+        var panel = new StackPanel { Tag = "welcome", Margin = new Thickness(6, 14, 6, 0) };
+        foreach (var (icon, text, done) in steps)
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
+            row.Children.Add(Icons.Shape(done ? "check" : icon, 16, done ? Theme.Brand : Theme.Muted));
+            row.Children.Add(new TextBlock { Text = text, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Foreground = done ? Theme.Text : Theme.Muted });
+            panel.Children.Add(row);
+        }
+        panel.Children.Add(new TextBlock { Text = "Ví dụ: Mô hình có bao nhiêu cột, cột nào bị trùng?", Foreground = Theme.Muted, FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(26, 4, 0, 0) });
+        _transcript.Children.Add(panel);
     }
 
     private async Task LoadModels()
@@ -219,7 +244,7 @@ internal sealed class ChatView : UserControl
         var preset = Preset;
         if (preset.IsDesktop) return;
         var key = CredentialStore.Read(preset.Id);
-        if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = "Cần API key: bấm 🔑"; return; }
+        if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = "Cần API key"; return; }
         try
         {
             _status.Text = "Đang tải model…";
@@ -267,6 +292,7 @@ internal sealed class ChatView : UserControl
         if (!_providerReady) { ApplyProvider(); if (!_providerReady) return; }
 
         _input.Clear();
+        if (_transcript.Children.Count == 1 && _transcript.Children[0] is FrameworkElement { Tag: "welcome" }) _transcript.Children.Clear();
         if (_transcript.Children.Count == 0 && !Preset.Local)
             AddLine($"Câu hỏi và dữ liệu lệnh được gửi tới {Preset.Name}.", Theme.Muted);
         AddBubble(text, user: true);

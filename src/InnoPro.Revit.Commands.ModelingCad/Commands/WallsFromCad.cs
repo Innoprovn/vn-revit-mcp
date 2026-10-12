@@ -10,7 +10,7 @@ public sealed class CreateWallsFromCad : RevitCommandBase
 {
     public override string Name => "create_walls_from_cad";
     public override string Category => "Dựng hình CAD";
-    public override RibbonButton? Ribbon => new("Tường CAD", "▥");
+    public override RibbonButton? Ribbon => new("Tường CAD", "wall");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
         "Vẽ tường kiến trúc từ cặp nét song song (hoặc cung đồng tâm) trên layer CAD. Wall Type chọn theo đúng bề dày đo được.";

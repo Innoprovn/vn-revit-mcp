@@ -10,7 +10,7 @@ public sealed class CreateFloorsFromCad : RevitCommandBase
 {
     public override string Name => "create_floors_from_cad";
     public override string Category => "Dựng hình CAD";
-    public override RibbonButton? Ribbon => new("Sàn/trần CAD", "▤");
+    public override RibbonButton? Ribbon => new("Sàn/trần CAD", "floor");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
         "Vẽ sàn hoặc trần theo vùng hatch trên layer CAD. Tên vùng đọc từ Text Note nằm trong hatch để chọn type.";

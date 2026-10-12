@@ -10,7 +10,7 @@ public sealed class RebarLocalMove : RevitCommandBase
     public override string Name => "rebar_local_move";
     public override string Category => "Rebar";
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton? Ribbon => new("Dịch thép", "✥");
+    public override RibbonButton? Ribbon => new("Dịch thép", "move");
     public override string Description =>
         "Dịch thép theo hệ trục local của thanh (lên/xuống/trái/phải/trước/sau) hoặc tới khoảng hở mong muốn so với một mặt hay thanh khác.";
     public override string InputSchema => """

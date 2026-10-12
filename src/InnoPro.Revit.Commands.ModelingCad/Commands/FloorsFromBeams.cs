@@ -29,7 +29,7 @@ public sealed class CreateFloorsFromBeams : RevitCommandBase
 {
     public override string Name => "create_floors_from_beams";
     public override string Category => "Dựng hình";
-    public override RibbonButton? Ribbon => new("Sàn theo dầm", "▦");
+    public override RibbonButton? Ribbon => new("Sàn theo dầm", "floor");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
         "Tạo sàn cho mọi ô khép kín giữa tim dầm và vách của một tầng (hoặc theo line đường bao đã vẽ). Bỏ qua ô dưới 1 m² và ô đã có sàn.";

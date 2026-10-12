@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Autodesk.Revit.UI;
 using InnoPro.Revit.Sdk;
+using InnoPro.Ui;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace InnoPro.Revit.Addin;
@@ -34,17 +35,17 @@ internal static class RibbonManager
 
         var assembly = typeof(RibbonManager).Assembly.Location;
         var ai = app.CreateRibbonPanel(TabName, AiPanel);
-        var system = new PulldownButtonData("InnoPro.System", "Hệ thống") { ToolTip = "Lệnh, kết nối AI, cập nhật", Image = Icon("⚙", 16), LargeImage = Icon("⚙", 32) };
+        var system = new PulldownButtonData("InnoPro.System", "Hệ thống") { ToolTip = "Lệnh, kết nối AI, cập nhật", Image = Icon("settings", 16), LargeImage = Icon("settings", 32) };
         var stacked = ai.AddStackedItems(
-            Button("InnoPro.Mcp.Chat", "Chat AI", assembly, typeof(ShowChatCommand).FullName!, "✦", "Chat với AI ngay trong Revit"),
-            Button("InnoPro.Mcp.Store", "Cửa hàng", assembly, typeof(StoreCommand).FullName!, "⊕", "Cài lệnh do cộng đồng đóng góp"),
+            Button("InnoPro.Mcp.Chat", "Chat AI", assembly, typeof(ShowChatCommand).FullName!, "chat", "Chat với AI ngay trong Revit"),
+            Button("InnoPro.Mcp.Store", "Cửa hàng", assembly, typeof(StoreCommand).FullName!, "store", "Cài lệnh do cộng đồng đóng góp"),
             system);
         var menu = (PulldownButton)stacked[2];
-        menu.AddPushButton(Button("InnoPro.Mcp.Commands", "Danh sách lệnh", assembly, typeof(ShowCommandsCommand).FullName!, "≡", "Lệnh đang có và lỗi nạp lệnh"));
-        menu.AddPushButton(Button("InnoPro.Mcp.Connect", "Kết nối AI", assembly, typeof(ConnectAiCommand).FullName!, "⇄", "Nối Claude, Cursor, VS Code... với Revit"));
-        menu.AddPushButton(Button("InnoPro.Mcp.Reload", "Nạp lại lệnh", assembly, typeof(ReloadCommandsCommand).FullName!, "↻", "Nạp lại lệnh, không cần mở lại Revit"));
-        menu.AddPushButton(Button("InnoPro.Mcp.Toggle", "Bật/Tắt MCP", assembly, typeof(ToggleBridgeCommand).FullName!, "⏻", "Cho phép hoặc chặn AI điều khiển Revit"));
-        menu.AddPushButton(Button("InnoPro.Mcp.Update", "Cập nhật", assembly, typeof(UpdateCommand).FullName!, "⇩", "Kiểm tra bản mới"));
+        menu.AddPushButton(Button("InnoPro.Mcp.Commands", "Danh sách lệnh", assembly, typeof(ShowCommandsCommand).FullName!, "list", "Lệnh đang có và lỗi nạp lệnh"));
+        menu.AddPushButton(Button("InnoPro.Mcp.Connect", "Kết nối AI", assembly, typeof(ConnectAiCommand).FullName!, "connect", "Nối Claude, Cursor, VS Code... với Revit"));
+        menu.AddPushButton(Button("InnoPro.Mcp.Reload", "Nạp lại lệnh", assembly, typeof(ReloadCommandsCommand).FullName!, "reload", "Nạp lại lệnh, không cần mở lại Revit"));
+        menu.AddPushButton(Button("InnoPro.Mcp.Toggle", "Bật/Tắt MCP", assembly, typeof(ToggleBridgeCommand).FullName!, "power", "Cho phép hoặc chặn AI điều khiển Revit"));
+        menu.AddPushButton(Button("InnoPro.Mcp.Update", "Cập nhật", assembly, typeof(UpdateCommand).FullName!, "update", "Kiểm tra bản mới"));
 
         Build(registry, name => app.GetRibbonPanels(TabName).FirstOrDefault(p => p.Name == name) ?? app.CreateRibbonPanel(TabName, name));
     }
@@ -92,7 +93,7 @@ internal static class RibbonManager
             {
                 var featured = group.Where(c => c.Ribbon != null).OrderBy(c => c.Name).ToList();
                 var items = featured.Select(c => (RibbonItemData)Button($"InnoPro.Cmd.{c.Name}", Short(c.Ribbon!.Text), path, stubs[c.Name],
-                    c.Ribbon.Glyph ?? Glyph(c), Tooltip(c))).ToList();
+                    Glyph(c), Tooltip(c))).ToList();
                 items.Add(MenuData(group.Key, "Tất cả"));
                 var created = AddCompact(panel(group.Key), items);
 
@@ -105,7 +106,7 @@ internal static class RibbonManager
             // Nhóm còn lại: mỗi nhóm một menu danh sách trong panel "Khác", kèm menu "Lệnh mới" cho lệnh thêm về sau.
             var rest = groups.Where(g => g.All(c => c.Ribbon == null)).ToList();
             var menuData = rest.Select(g => MenuData(g.Key, Short(g.Key))).ToList();
-            menuData.Add(new PulldownButtonData("InnoPro.More.New", "Lệnh mới") { Image = Icon("+", 16), LargeImage = Icon("+", 32), ToolTip = "Lệnh vừa thêm" });
+            menuData.Add(new PulldownButtonData("InnoPro.More.New", "Lệnh mới") { Image = Icon("plus", 16), LargeImage = Icon("plus", 32), ToolTip = "Lệnh vừa thêm" });
             var menus = AddCompact(panel(OtherPanel), menuData.Cast<RibbonItemData>().ToList());
             for (var i = 0; i < rest.Count; i++)
             {
@@ -147,8 +148,8 @@ internal static class RibbonManager
         new($"InnoPro.Menu.{category}", label)
         {
             ToolTip = $"Lệnh nhóm {category}",
-            Image = Icon(category[..1].ToUpperInvariant(), 16),
-            LargeImage = Icon(category[..1].ToUpperInvariant(), 32),
+            Image = Icon(Icons.Resolve(null, category), 16),
+            LargeImage = Icon(Icons.Resolve(null, category), 32),
         };
 
     // Mục trong menu chỉ có icon nhỏ (Revit dùng LargeImage nếu có, làm menu to và nặng).
@@ -156,7 +157,7 @@ internal static class RibbonManager
         new($"InnoPro.List.{c.Name}", Labels.MenuTitle(c), path, className)
         {
             ToolTip = Tooltip(c),
-            Image = Icon(c.Ribbon?.Glyph ?? Glyph(c), 16),
+            Image = Icon(Glyph(c), 16),
         };
 
     private static void Track(string name, RibbonItem item)
@@ -167,7 +168,8 @@ internal static class RibbonManager
 
     private static string Short(string text) => text.Replace('\n', ' ').Trim();
 
-    private static string Glyph(IRevitCommand c) => c.Category[..1].ToUpperInvariant();
+    /// <summary>Tên icon vector của lệnh: icon khai báo nếu có trong bộ, không thì icon của nhóm.</summary>
+    private static string Glyph(IRevitCommand c) => Icons.Resolve(c.Ribbon?.Glyph, c.Category);
 
     private static string Tooltip(IRevitCommand c) => Labels.Short(c.Description, 160);
 
@@ -214,22 +216,6 @@ internal static class RibbonManager
             Image = Icon(glyph, 16),
         };
 
-    /// <summary>Icon vẽ bằng mã để repo không phụ thuộc file ảnh.</summary>
-    private static BitmapSource Icon(string glyph, int size)
-    {
-        var visual = new DrawingVisual();
-        using (var dc = visual.RenderOpen())
-        {
-            dc.DrawRoundedRectangle(new SolidColorBrush(Brand), null, new Rect(0, 0, size, size), size * 0.22, size * 0.22);
-            var text = new FormattedText(glyph, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-                new Typeface(new FontFamily("Segoe UI Symbol"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal),
-                size * (glyph.Length > 1 ? 0.42 : 0.62), Brushes.White, 1.0);
-            dc.DrawText(text, new Point((size - text.Width) / 2, (size - text.Height) / 2));
-        }
-
-        var bitmap = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(visual);
-        bitmap.Freeze();
-        return bitmap;
-    }
+    /// <summary>Icon vector của bộ InnoPro (src/Shared/Ui/Icons.cs).</summary>
+    private static BitmapSource Icon(string name, int size) => Icons.Bitmap(Icons.Has(name) ? name : "cube", size);
 }

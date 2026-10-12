@@ -30,7 +30,7 @@ public sealed class ReadSchedule : RevitCommandBase
 {
     public override string Name => "read_schedule";
     public override string Category => "Dữ liệu";
-    public override RibbonButton? Ribbon => new("Schedule", "▦");
+    public override RibbonButton? Ribbon => new("Schedule", "table");
     public override string Description =>
         "Đọc nội dung một schedule như bảng (tiêu đề cột + các dòng, đúng như hiển thị trong Revit). " +
         "Tùy chọn xuất toàn bộ ra file CSV (UTF-8, mở được bằng Excel).";
@@ -95,7 +95,7 @@ public sealed class GetMaterialQuantities : RevitCommandBase
 {
     public override string Name => "get_material_quantities";
     public override string Category => "Dữ liệu";
-    public override RibbonButton? Ribbon => new("Khối lượng", "m³");
+    public override RibbonButton? Ribbon => new("Khối lượng", "quantity");
     public override string Description =>
         "Bóc khối lượng theo vật liệu: thể tích (m³) và diện tích (m²) của từng vật liệu, có thể lọc theo category và tầng. " +
         "Ví dụ: khối lượng bê tông cột tầng 1.";

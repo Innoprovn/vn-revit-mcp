@@ -11,7 +11,7 @@ public sealed class CheckRooms : RevitCommandBase
     public override string Category => "QA-QC";
     public override string Description =>
         "Kiểm tra phòng (Room) lỗi: chưa đặt vào mô hình, không khép kín (diện tích 0), và trùng số phòng. Trả về danh sách để sửa.";
-    public override RibbonButton Ribbon => new("Kiểm tra phòng", "▢");
+    public override RibbonButton Ribbon => new("Kiểm tra phòng", "room");
 
     public override object Execute(RevitCommandContext context, JsonElement arguments)
     {

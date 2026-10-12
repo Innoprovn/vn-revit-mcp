@@ -12,7 +12,7 @@ public sealed class PlacePilesFromCad : RevitCommandBase
 {
     public override string Name => "place_piles_from_cad";
     public override string Category => "Dựng hình CAD";
-    public override RibbonButton? Ribbon => new("Cọc + đài", "◎");
+    public override RibbonButton? Ribbon => new("Cọc + đài", "pile");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
         "Đặt cọc theo đường tròn và đài móng (Foundation Slab) theo đường bao kín trên layer CAD, kèm lớp lót và join cọc vào đài.";
@@ -139,7 +139,7 @@ public sealed class PlaceDoorsWindowsFromCad : RevitCommandBase
 {
     public override string Name => "place_doors_windows_from_cad";
     public override string Category => "Dựng hình CAD";
-    public override RibbonButton? Ribbon => new("Cửa CAD", "▯");
+    public override RibbonButton? Ribbon => new("Cửa CAD", "door");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
         "Đặt cửa đi/cửa sổ vào tường theo ký hiệu cửa trên layer CAD; tên cửa đọc từ Text Note gần đó để chọn type.";

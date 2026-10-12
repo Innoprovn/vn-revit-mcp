@@ -55,10 +55,39 @@ internal static partial class Labels
         return first.Length <= max ? first : first[..(max - 1)].TrimEnd() + "…";
     }
 
+    private static readonly Dictionary<string, string> Units = new()
+    {
+        ["mm"] = "mm", ["m"] = "m", ["m2"] = "m²", ["m3"] = "m³", ["mm2"] = "mm²", ["kg"] = "kg", ["mb"] = "MB", ["deg"] = "°",
+    };
+
+    // Tên hiển thị tiếng Việt cho các khóa kết quả hay gặp (chỉ đổi chữ trên giao diện, dữ liệu cho AI giữ nguyên).
+    private static readonly Dictionary<string, string> Words = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["name"] = "Tên", ["count"] = "Số lượng", ["total"] = "Tổng", ["category"] = "Category", ["categories"] = "Category",
+        ["type"] = "Loại", ["types"] = "Loại", ["family"] = "Family", ["level"] = "Tầng", ["levels"] = "Tầng",
+        ["id"] = "Id", ["element_id"] = "Id", ["element_ids"] = "Id", ["ids"] = "Id", ["elements"] = "Phần tử",
+        ["view"] = "View", ["views"] = "View", ["sheet"] = "Sheet", ["sheets"] = "Sheet", ["mark"] = "Mark",
+        ["length"] = "Chiều dài", ["area"] = "Diện tích", ["volume"] = "Thể tích", ["weight"] = "Khối lượng",
+        ["diameter"] = "Đường kính", ["quantity"] = "Số lượng", ["value"] = "Giá trị", ["status"] = "Trạng thái",
+        ["reason"] = "Lý do", ["problem"] = "Vấn đề", ["error"] = "Lỗi", ["errors"] = "Lỗi", ["message"] = "Thông báo",
+        ["notes"] = "Ghi chú", ["created"] = "Đã tạo", ["changed"] = "Đã đổi", ["skipped"] = "Bỏ qua", ["failed"] = "Lỗi",
+        ["found"] = "Tìm thấy", ["warnings"] = "Cảnh báo", ["warning"] = "Cảnh báo", ["description"] = "Mô tả",
+        ["parameter"] = "Tham số", ["parameters"] = "Tham số", ["file"] = "File", ["path"] = "Đường dẫn",
+        ["total_model_elements"] = "Tổng phần tử", ["category_count"] = "Số category", ["host"] = "Host",
+        ["severity"] = "Mức độ", ["layer"] = "Layer", ["layers"] = "Layer", ["width"] = "Bề rộng", ["height"] = "Chiều cao",
+        ["elevation"] = "Cao độ", ["number"] = "Số", ["room"] = "Phòng", ["rooms"] = "Phòng", ["walls"] = "Tường",
+    };
+
+    /// <summary>"total_length_m" → "Total length (m)"; khóa quen thuộc thì dùng tên tiếng Việt.</summary>
     public static string Humanize(string name)
     {
-        var words = name.Replace('_', ' ').Trim();
-        return words.Length == 0 ? words : char.ToUpperInvariant(words[0]) + words[1..];
+        if (Words.TryGetValue(name, out var vn)) return vn;
+        var parts = name.Split('_', StringSplitOptions.RemoveEmptyEntries).ToList();
+        string? unit = null;
+        if (parts.Count > 1 && Units.TryGetValue(parts[^1].ToLowerInvariant(), out var u)) { unit = u; parts.RemoveAt(parts.Count - 1); }
+        var words = string.Join(' ', parts).Trim();
+        if (words.Length > 0) words = char.ToUpperInvariant(words[0]) + words[1..];
+        return unit == null ? words : $"{words} ({unit})";
     }
 
     /// <summary>Ô nhập có chữ mờ gợi ý khi đang trống.</summary>

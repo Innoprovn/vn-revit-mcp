@@ -12,7 +12,7 @@ public sealed class TagElementsInView : RevitCommandBase
     public override string Name => "tag_elements_in_view";
     public override string Category => "Bản vẽ";
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton? Ribbon => new("Tag tự động", "🏷");
+    public override RibbonButton? Ribbon => new("Tag tự động", "tag");
     public override string Description =>
         "Gắn tag hàng loạt cho một category trong view, chọn loại tag, leader, hướng; bỏ qua phần tử đã có tag.";
     public override string InputSchema => """
@@ -155,7 +155,7 @@ public sealed class DimensionGrids : RevitCommandBase
     public override string Name => "dimension_grids";
     public override string Category => "Bản vẽ";
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton? Ribbon => new("Dim trục", "↔");
+    public override RibbonButton? Ribbon => new("Dim trục", "dimension");
     public override string Description =>
         "Tạo chuỗi kích thước và kích thước tổng cho lưới trục trên view mặt bằng.";
     public override string InputSchema => """
@@ -264,7 +264,7 @@ public sealed class DimToNearestGrid : RevitCommandBase
     public override string Name => "dim_to_nearest_grid";
     public override string Category => "QA-QC";
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton? Ribbon => new("Dim tới trục", "⊢");
+    public override RibbonButton? Ribbon => new("Dim tới trục", "dim-grid");
     public override string Description =>
         "Tạo dim từ mép cột, đài móng tới trục gần nhất theo hai phương; tùy chọn dịch cấu kiện để số dim tròn.";
     public override string InputSchema => """

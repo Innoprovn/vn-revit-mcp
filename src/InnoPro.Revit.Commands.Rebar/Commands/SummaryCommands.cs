@@ -10,7 +10,7 @@ public sealed class RebarSummary : RevitCommandBase
     public override string Name => "rebar_summary";
     public override string Category => "Rebar";
     public override bool Pinned => true;
-    public override RibbonButton? Ribbon => new("Thống kê", "Σ");
+    public override RibbonButton? Ribbon => new("Thống kê", "stats");
     public override string Description =>
         "Thống kê cốt thép theo host, đường kính, bar type, shape, partition hoặc tham số: số thanh, chiều dài, khối lượng. Chỉ đọc.";
     public override string InputSchema => $$"""
@@ -108,7 +108,7 @@ public sealed class RebarQuickSelect : RevitCommandBase
 {
     public override string Name => "rebar_quick_select";
     public override string Category => "Rebar";
-    public override RibbonButton? Ribbon => new("Chọn nhanh", "⊙");
+    public override RibbonButton? Ribbon => new("Chọn nhanh", "filter");
     public override string Description =>
         "Chọn mọi thanh thép cùng nhóm (partition, tham số, bar type, shape, host...); không truyền giá trị thì liệt kê các nhóm.";
     public override string InputSchema => $$"""

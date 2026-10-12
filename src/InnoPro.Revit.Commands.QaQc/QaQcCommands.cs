@@ -8,7 +8,7 @@ public sealed class GetWarnings : RevitCommandBase
 {
     public override string Name => "get_warnings";
     public override string Category => "QA-QC";
-    public override RibbonButton? Ribbon => new("Cảnh báo", "⚠");
+    public override RibbonButton? Ribbon => new("Cảnh báo", "warning");
     public override string Description =>
         "Liệt kê cảnh báo (Warnings) của mô hình, gom theo nội dung, sắp theo số lượng giảm dần, kèm vài id phần tử mẫu. " +
         "Dùng để đánh giá chất lượng mô hình hoặc tìm lỗi trùng, chồng, không nối.";
@@ -54,7 +54,7 @@ public sealed class FindDuplicateElements : RevitCommandBase
 {
     public override string Name => "find_duplicate_elements";
     public override string Category => "QA-QC";
-    public override RibbonButton? Ribbon => new("Trùng lặp", "⧉");
+    public override RibbonButton? Ribbon => new("Trùng lặp", "duplicate");
     public override string Description =>
         "Tìm phần tử bị trùng: cùng category, cùng type, cùng vị trí (điểm đặt hoặc đường định vị) trong sai số cho trước. " +
         "Hay gặp với cột, dầm, tường copy chồng lên nhau. Mỗi nhóm trả về danh sách id, giữ id đầu và xóa các id còn lại nếu cần.";
@@ -121,7 +121,7 @@ public sealed class CheckMissingParameters : RevitCommandBase
 {
     public override string Name => "check_missing_parameters";
     public override string Category => "QA-QC";
-    public override RibbonButton? Ribbon => new("Tham số trống", "∅");
+    public override RibbonButton? Ribbon => new("Tham số trống", "empty");
     public override string Description =>
         "Kiểm tra phần tử của một category có điền đủ các tham số yêu cầu không (ví dụ Mark, Comments, tham số dự án). " +
         "Trả về số phần tử thiếu theo từng tham số và id mẫu.";
@@ -170,7 +170,7 @@ public sealed class FindClashes : RevitCommandBase
 
     public override string Name => "find_clashes";
     public override string Category => "QA-QC";
-    public override RibbonButton? Ribbon => new("Va chạm", "✕");
+    public override RibbonButton? Ribbon => new("Va chạm", "clash");
     public override string Description =>
         "Tìm va chạm hình học giữa hai category trong mô hình hiện tại (ví dụ ống gió với dầm). " +
         "Dùng giao khối thật (ElementIntersectsElementFilter), không chỉ hộp bao. Tối đa 5000 phần tử nhóm A.";

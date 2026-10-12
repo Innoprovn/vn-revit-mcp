@@ -13,7 +13,7 @@ public sealed class FindLinkClashes : RevitCommandBase
 
     public override string Name => "find_link_clashes";
     public override string Category => "QA-QC";
-    public override RibbonButton? Ribbon => new("Va chạm link", "⨯");
+    public override RibbonButton? Ribbon => new("Va chạm link", "clash");
     public override string Description =>
         "Tìm va chạm giữa mô hình chính và model link, kèm độ xuyên (mm) và ngưỡng bỏ qua.";
     public override string InputSchema => """
@@ -254,7 +254,7 @@ public sealed class AuditModelHealth : RevitCommandBase
 {
     public override string Name => "audit_model_health";
     public override string Category => "QA-QC";
-    public override RibbonButton? Ribbon => new("Sức khỏe MH", "♥");
+    public override RibbonButton? Ribbon => new("Sức khỏe MH", "health");
     public override string Description =>
         "Đánh giá sức khỏe mô hình: cảnh báo, CAD import, in-place, phòng lỗi, view ngoài sheet, link.";
 

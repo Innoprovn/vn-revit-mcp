@@ -27,7 +27,7 @@ public sealed class RebarDetachHost : RevitCommandBase
     public override string Name => "rebar_detach_host";
     public override string Category => "Rebar";
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton? Ribbon => new("Ngắt host", "⛓");
+    public override RibbonButton? Ribbon => new("Ngắt host", "detach");
     public override string Description =>
         "Ngắt liên kết thép với host (chuyển ràng buộc sang ToSurface) mà thép đứng yên; thanh nào bị dịch thì tự hoàn tác.";
     public override string InputSchema => "{ \"type\": \"object\", \"properties\": {" + HostLinkSchema.Common + "} }";

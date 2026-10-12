@@ -110,7 +110,7 @@ public sealed class AutoJoinGeometry : RevitCommandBase
 {
     public override string Name => "auto_join_geometry";
     public override string Category => "Dựng hình";
-    public override RibbonButton? Ribbon => new("Tự Join", "⋈");
+    public override RibbonButton? Ribbon => new("Tự Join", "join");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
         "Join hình học hàng loạt giữa các nhóm cấu kiện chạm nhau theo thứ tự ưu tiên (nhóm trước cắt nhóm sau), hoặc đảo/bỏ join.";
@@ -318,7 +318,7 @@ public sealed class SelectSameType : RevitCommandBase
 {
     public override string Name => "select_same_type";
     public override string Category => "Chọn";
-    public override RibbonButton? Ribbon => new("Cùng loại", "≡");
+    public override RibbonButton? Ribbon => new("Cùng loại", "layers");
     public override string Description => "Chọn mọi phần tử trong mô hình cùng type với các phần tử đã cho.";
     public override string InputSchema => """
         {

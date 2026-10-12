@@ -10,7 +10,7 @@ public sealed class CreateSheets : RevitCommandBase
     public override string Name => "create_sheets";
     public override string Category => "Bản vẽ";
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton? Ribbon => new("Tạo sheet", "▭");
+    public override RibbonButton? Ribbon => new("Tạo sheet", "sheet");
     public override string Description =>
         "Tạo hàng loạt sheet với khung tên chọn trước, theo danh sách số hiệu/tên hoặc số hiệu tự tăng.";
     public override string InputSchema => """
@@ -112,7 +112,7 @@ public sealed class PlaceViewsOnSheet : RevitCommandBase
     public override string Name => "place_views_on_sheet";
     public override string Category => "Bản vẽ";
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton? Ribbon => new("Đặt view", "⊞");
+    public override RibbonButton? Ribbon => new("Đặt view", "view");
     public override string Description =>
         "Đặt view hoặc schedule lên sheet, tự xếp trong khung tên hoặc theo tọa độ.";
     public override string InputSchema => """

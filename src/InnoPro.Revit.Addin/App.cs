@@ -53,6 +53,7 @@ public sealed class App : IExternalApplication
             Bridge.Start();
 
             ChatHost = new ChatHost(this, _dispatcher);
+            ChatPane.EnsureLoaded(ChatHost);
             application.RegisterDockablePane(ChatPane.Id, "InnoPro AI", ChatPane);
 
             ButtonRunner.Register();

@@ -314,7 +314,7 @@ public sealed class ExportSheetsPdf : RevitCommandBase
     public override string Category => "Dữ liệu";
     // Document.Export không chạy được khi Transaction đang mở.
     public override TransactionMode TransactionMode => TransactionMode.None;
-    public override RibbonButton? Ribbon => new("Xuất PDF", "⎙");
+    public override RibbonButton? Ribbon => new("Xuất PDF", "pdf");
     public override string Description =>
         "Xuất sheet ra PDF (từng file \"số hiệu - tên\" hoặc gộp một file) vào thư mục chỉ định.";
     public override string InputSchema => """

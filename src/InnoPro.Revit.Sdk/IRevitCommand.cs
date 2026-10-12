@@ -21,7 +21,7 @@ public enum TransactionMode
 /// Nút lớn trên tab InnoPro. Lệnh không khai báo vẫn có mặt trong menu thả xuống của nhóm.
 /// </summary>
 /// <param name="Text">Chữ trên nút, dùng \n để xuống dòng.</param>
-/// <param name="Glyph">Một hai ký tự vẽ trên icon (ví dụ "⚠", "▦").</param>
+/// <param name="Glyph">Tên icon vector trong bộ InnoPro (ví dụ "wall", "warning", "table"); bỏ trống thì dùng icon của nhóm.</param>
 /// <param name="Panel">Nhóm trên ribbon, mặc định là Category của lệnh.</param>
 public sealed record RibbonButton(string Text, string? Glyph = null, string? Panel = null);
 

@@ -10,7 +10,7 @@ public sealed class RebarSetUnobscured : RevitCommandBase
     public override string Name => "rebar_set_unobscured";
     public override string Category => "Rebar";
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton? Ribbon => new("Unobscured", "◐");
+    public override RibbonButton? Ribbon => new("Unobscured", "eye");
     public override string Description =>
         "Bật/tắt hiển thị Unobscured của thép trong view hiện tại; toggle: tất cả đang bật thì tắt, còn lại thì bật.";
     public override string InputSchema => """

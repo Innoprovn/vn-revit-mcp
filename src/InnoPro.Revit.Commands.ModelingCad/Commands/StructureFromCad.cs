@@ -24,7 +24,7 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
 {
     public override string Name => "place_columns_from_cad";
     public override string Category => "Dựng hình CAD";
-    public override RibbonButton? Ribbon => new("Cột CAD", "▪");
+    public override RibbonButton? Ribbon => new("Cột CAD", "column");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
         "Đặt cột kết cấu theo đường bao chữ nhật trên layer CAD, đúng kích thước và góc xoay. Tự tạo type thiếu nếu có column_family.";
@@ -107,7 +107,7 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
 {
     public override string Name => "place_beams_from_cad";
     public override string Category => "Dựng hình CAD";
-    public override RibbonButton? Ribbon => new("Dầm CAD", "═");
+    public override RibbonButton? Ribbon => new("Dầm CAD", "beam");
     public override TransactionMode TransactionMode => TransactionMode.Auto;
     public override string Description =>
         "Đặt dầm kết cấu từ cặp nét song song trên layer CAD; tên và b×h đọc từ Text Note gần dầm (ví dụ D1(220x600)).";

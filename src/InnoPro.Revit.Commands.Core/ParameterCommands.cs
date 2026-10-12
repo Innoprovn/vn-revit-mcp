@@ -9,7 +9,7 @@ public sealed class SetParameters : RevitCommandBase
     public override string Name => "set_parameters";
     public override string Category => "Tham số";
     public override bool Pinned => true;
-    public override RibbonButton? Ribbon => new("Sửa tham số", "✎");
+    public override RibbonButton? Ribbon => new("Sửa tham số", "edit");
     public override string Description =>
         "Gán cùng một giá trị cho một tham số trên nhiều phần tử. Giá trị số có đơn vị (chiều dài, diện tích...) được hiểu " +
         "theo đơn vị hiển thị của dự án, ví dụ \"3000\" với dự án dùng mm. Phần tử nào lỗi thì bỏ qua và báo lại, phần còn lại vẫn được sửa.";
