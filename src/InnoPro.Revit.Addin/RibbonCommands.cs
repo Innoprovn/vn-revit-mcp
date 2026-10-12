@@ -2,6 +2,7 @@ using System.Text;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using InnoPro.Bridge;
 
 namespace InnoPro.Revit.Addin;
 
@@ -31,10 +32,19 @@ public sealed class ReloadCommandsCommand : IExternalCommand
         var app = App.Instance;
         if (app == null) return Result.Failed;
 
-        var count = app.ReloadCommands();
-        TaskDialog.Show("InnoPro MCP", $"Đã nạp lại: {count} lệnh. Lỗi nạp (nếu có) ghi trong log.");
+        var result = app.ReloadCommands();
+        var dialog = new TaskDialog("InnoPro MCP")
+        {
+            MainInstruction = $"Đã nạp lại: {result.CommandCount} lệnh" + (result.Errors.Count > 0 ? $", {result.Errors.Count} lỗi" : ""),
+            MainContent = $"Thả file lệnh .cs vào:\n{Paths.UserScriptsDir}",
+            ExpandedContent = Errors(result.Errors),
+        };
+        dialog.Show();
         return Result.Succeeded;
     }
+
+    internal static string Errors(IReadOnlyList<LoadError> errors) =>
+        string.Join("\n", errors.Select(e => $"• {e.Source}: {e.Message}"));
 }
 
 [Transaction(TransactionMode.ReadOnly)]
@@ -52,11 +62,15 @@ public sealed class ShowCommandsCommand : IExternalCommand
             foreach (var c in group.OrderBy(c => c.Command.Name))
                 text.AppendLine($"  • {c.Command.Name}  ({c.CommandSet})");
         }
+        if (app.Registry.Errors.Count > 0)
+            text.AppendLine().AppendLine("[Lỗi nạp lệnh]").AppendLine(ReloadCommandsCommand.Errors(app.Registry.Errors));
 
         var dialog = new TaskDialog("InnoPro MCP")
         {
             MainInstruction = $"vn-revit-mcp {App.Version}: {(app.Bridge.IsRunning ? "đang BẬT" : "đang TẮT")}",
-            MainContent = $"{app.Registry.Commands.Count} lệnh, pipe: {app.Bridge.PipeName}",
+            MainContent = $"{app.Registry.Commands.Count} lệnh" +
+                          (app.Registry.Errors.Count > 0 ? $", {app.Registry.Errors.Count} lỗi nạp" : "") +
+                          $"\nThư mục lệnh .cs: {Paths.UserScriptsDir}",
             ExpandedContent = text.ToString(),
         };
         dialog.Show();

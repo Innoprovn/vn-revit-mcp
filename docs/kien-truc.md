@@ -54,8 +54,14 @@ Mỗi dòng một JSON (UTF-8, snake_case).
 
 | Đường dẫn | Nội dung |
 |---|---|
-| `%APPDATA%\Autodesk\Revit\Addins\<năm>\InnoPro.VnRevitMcp\` | Add-in và CommandSet đi kèm |
+| `%APPDATA%\Autodesk\Revit\Addins\<năm>\InnoPro.VnRevitMcp.addin` | Khai báo add-in, trỏ tới `current\addin\InnoPro.Revit.Addin.dll` |
+| `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\app\<phiên bản>\addin\` | Add-in và CommandSet đi kèm |
+| `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\app\<phiên bản>\server\` | MCP server `vn-revit-mcp.exe` |
+| `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current` | Junction trỏ tới phiên bản đang dùng; AI client gọi `current\server\vn-revit-mcp.exe` |
 | `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\Commands\` | CommandSet cài thêm |
 | `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\commands.json` | Danh mục lệnh lần nạp gần nhất |
 | `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\logs\` | Log add-in |
-| `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\server\` | MCP server (bản cài dev) |
+
+Cập nhật phiên bản chỉ cần chép vào `app\<phiên bản mới>` rồi trỏ lại junction `current`: làm được cả khi Revit
+hoặc AI client đang giữ file của bản cũ, bản mới có hiệu lực từ lần mở sau. Dữ liệu người dùng
+(`Commands\`, `Scripts\`, `logs\`, `commands.json`) không bao giờ bị xóa khi cập nhật.

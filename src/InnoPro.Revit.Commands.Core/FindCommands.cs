@@ -8,9 +8,10 @@ public sealed class FindElements : RevitCommandBase
 {
     public override string Name => "find_elements";
     public override string Category => "Truy vấn";
+    public override bool Pinned => true;
     public override string Description =>
         "Tìm phần tử theo category, tầng, view đang mở và/hoặc giá trị tham số. " +
-        "Dùng trước khi sửa hay chọn phần tử để lấy danh sách id. Trả về tổng số và tối đa 'limit' phần tử.";
+        "Dùng trước khi sửa/chọn phần tử. output=ids chỉ trả id (rẻ nhất, dùng để chuyển sang lệnh khác), count chỉ trả số lượng.";
     public override string InputSchema => """
         {
           "type": "object",
@@ -21,6 +22,7 @@ public sealed class FindElements : RevitCommandBase
             "parameter": { "type": "string", "description": "Tên tham số để lọc." },
             "equals": { "type": "string", "description": "Giá trị tham số phải bằng (so theo chuỗi hiển thị, không phân biệt hoa thường)." },
             "contains": { "type": "string", "description": "Giá trị tham số phải chứa chuỗi này." },
+            "output": { "type": "string", "enum": ["table", "ids", "count"], "description": "Mặc định table." },
             "limit": { "type": "integer", "description": "Số phần tử tối đa trả về, mặc định 200." }
           }
         }
@@ -41,10 +43,8 @@ public sealed class FindElements : RevitCommandBase
 
         if (Args.GetStringOrDefault(arguments, "level") is { } levelName)
         {
-            var level = new FilteredElementCollector(doc).OfClass(typeof(Level)).Cast<Level>()
-                            .FirstOrDefault(l => string.Equals(l.Name, levelName, StringComparison.OrdinalIgnoreCase))
-                        ?? throw new CommandException($"Không có tầng '{levelName}'.");
-            elements = elements.Where(e => e.LevelId == level.Id);
+            var level = Lookup.Level(doc, levelName);
+            elements = elements.Where(e => ElementInfo.LevelName(doc, e) == level.Name);
         }
 
         if (Args.GetStringOrDefault(arguments, "parameter") is { } parameterName)
@@ -59,11 +59,11 @@ public sealed class FindElements : RevitCommandBase
 
         var limit = (int)Args.GetLongOrDefault(arguments, "limit", 200);
         var list = elements.ToList();
-        return new
+        return Args.GetStringOrDefault(arguments, "output", "table") switch
         {
-            total = list.Count,
-            returned = Math.Min(limit, list.Count),
-            elements = list.Take(limit).Select(e => ElementInfo.Summary(doc, e)),
+            "count" => new { total = list.Count },
+            "ids" => new { total = list.Count, element_ids = list.Take(limit).Select(e => e.Id.Value) },
+            _ => Table.Of(list.Select(e => ElementInfo.Summary(doc, e)), limit),
         };
     }
 
@@ -110,14 +110,14 @@ public sealed class ListViews : RevitCommandBase
             views = views.Where(v => v.Name.Contains(part, StringComparison.OrdinalIgnoreCase));
 
         var limit = (int)Args.GetLongOrDefault(arguments, "limit", 300);
-        return views.OrderBy(v => v.ViewType.ToString()).ThenBy(v => v.Name).Take(limit).Select(v => new
+        return Table.Of(views.OrderBy(v => v.ViewType.ToString()).ThenBy(v => v.Name).Select(v => new
         {
             element_id = v.Id.Value,
             name = v.Name,
             view_type = v.ViewType.ToString(),
             level = v.GenLevel?.Name,
             scale = v.ViewType is ViewType.Schedule or ViewType.ThreeD ? (int?)null : v.Scale,
-        });
+        }), limit);
     }
 }
 
@@ -130,7 +130,7 @@ public sealed class ListSheets : RevitCommandBase
     public override object? Execute(RevitCommandContext context, JsonElement arguments)
     {
         var doc = context.Document;
-        return new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>()
+        return Table.Of(new FilteredElementCollector(doc).OfClass(typeof(ViewSheet)).Cast<ViewSheet>()
             .Where(s => !s.IsPlaceholder)
             .OrderBy(s => s.SheetNumber)
             .Select(s => new
@@ -139,6 +139,6 @@ public sealed class ListSheets : RevitCommandBase
                 sheet_number = s.SheetNumber,
                 name = s.Name,
                 views = s.GetAllPlacedViews().Select(id => doc.GetElement(id)?.Name),
-            });
+            }));
     }
 }

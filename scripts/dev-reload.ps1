@@ -4,33 +4,33 @@
   Vòng phát triển nhanh: build, chép CommandSet vào bản đã cài, rồi bảo Revit đang chạy nạp lại. Không cần tắt Revit.
 
 .DESCRIPTION
-  Chỉ áp dụng cho CommandSet (Commands\*). Nếu phần lõi (Addin, Sdk, Bridge) thay đổi thì script báo,
-  khi đó phải đóng Revit và chạy install-dev.ps1.
+  Chỉ áp dụng cho CommandSet (Commands\*), chép vào %LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\addin\Commands.
+  Nếu phần lõi (Addin, Sdk, Bridge) thay đổi thì script báo, khi đó chạy install-dev.ps1
+  (Revit đang mở thì bản mới có hiệu lực từ lần mở Revit sau).
 #>
-param([int[]]$RevitVersions = @(2025, 2026, 2027))
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $staged = Join-Path $root "artifacts\addin\InnoPro.VnRevitMcp"
+$installed = Join-Path $env:LOCALAPPDATA "InnoPro\vn-revit-mcp\current\addin"
+
+if (-not (Test-Path (Join-Path $installed "InnoPro.Revit.Addin.dll"))) {
+    throw "Chưa cài vn-revit-mcp tại $installed. Chạy install-dev.ps1 trước."
+}
 
 & (Join-Path $PSScriptRoot "build.ps1")
 
 . (Join-Path $PSScriptRoot "HostHash.ps1")
 $hostHash = Get-HostSourceHash $root
 
-$hostChanged = $false
-foreach ($year in $RevitVersions) {
-    $installed = Join-Path $env:APPDATA "Autodesk\Revit\Addins\$year\InnoPro.VnRevitMcp"
-    if (-not (Test-Path $installed)) { continue }
+$hashFile = Join-Path $installed "host.hash"
+$hostChanged = -not (Test-Path $hashFile) -or (Get-Content $hashFile -Raw).Trim() -ne $hostHash
 
-    $hashFile = Join-Path $installed "host.hash"
-    if (-not (Test-Path $hashFile) -or (Get-Content $hashFile -Raw).Trim() -ne $hostHash) { $hostChanged = $true }
-
-    $commands = Join-Path $installed "Commands"
-    if (Test-Path $commands) { Remove-Item $commands -Recurse -Force }
-    Copy-Item (Join-Path $staged "Commands") $commands -Recurse
-    Write-Host "Đã chép CommandSet vào Revit $year"
-}
+# CommandSet được nạp từ bộ nhớ nên không khóa file, chép đè được cả khi Revit đang chạy.
+$commands = Join-Path $installed "Commands"
+if (Test-Path $commands) { Remove-Item $commands -Recurse -Force }
+Copy-Item (Join-Path $staged "Commands") $commands -Recurse
+Write-Host "Đã chép CommandSet vào $commands"
 
 # Gửi reload_commands tới mọi phiên Revit đang chạy add-in.
 $pipes = [IO.Directory]::GetFiles("\\.\pipe\") | ForEach-Object { [IO.Path]::GetFileName($_) } | Where-Object { $_ -like "InnoPro.VnRevitMcp.*" }
@@ -50,5 +50,5 @@ foreach ($pipe in $pipes) {
 if (-not $pipes) { Write-Host "Không có Revit nào đang chạy; lệnh mới sẽ có khi mở Revit." }
 
 if ($hostChanged) {
-    Write-Warning "Phần lõi (Addin/Sdk/Bridge) đã thay đổi: đóng Revit rồi chạy install-dev.ps1 để cập nhật."
+    Write-Warning "Phần lõi (Addin/Sdk/Bridge) đã thay đổi: chạy install-dev.ps1 rồi mở lại Revit để cập nhật."
 }

@@ -1,57 +1,31 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Cài bản build trên máy dev vào các phiên bản Revit có trên máy (2025 trở lên).
+  Build rồi cài bản đang phát triển, dùng đúng bố cục và bộ cài như người dùng (phiên bản "dev").
 
 .DESCRIPTION
-  - Add-in:     %APPDATA%\Autodesk\Revit\Addins\<năm>\InnoPro.VnRevitMcp
-  - MCP server: %LOCALAPPDATA%\InnoPro\vn-revit-mcp\server\vn-revit-mcp.exe
-  Revit phải đóng trước khi cài (Revit khóa file DLL đang nạp).
+  - Chương trình: %LOCALAPPDATA%\InnoPro\vn-revit-mcp\app\dev\ (junction current trỏ tới đây)
+  - Add-in:       %APPDATA%\Autodesk\Revit\Addins\<năm>\InnoPro.VnRevitMcp.addin
+  - MCP server:   %LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe
+  Nếu Revit đang mở, bản mới được cài sang thư mục khác và có hiệu lực từ lần mở Revit sau.
+  Sửa CommandSet thì dùng dev-reload.ps1, không cần đóng Revit.
 #>
 param(
-    [int[]]$RevitVersions = @(2025, 2026, 2027),
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$NoClients
 )
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $artifacts = Join-Path $root "artifacts"
 
-if (Get-Process Revit -ErrorAction SilentlyContinue) {
-    throw "Revit đang chạy. Hãy lưu công việc, đóng Revit rồi chạy lại script."
-}
-
 if (-not $SkipBuild) { & (Join-Path $PSScriptRoot "build.ps1") }
 
+# host.hash: dev-reload.ps1 so sánh để biết phần lõi (Addin/Sdk/Bridge) có đổi so với bản đã cài không.
+# Ghi vào bản build, install.ps1 chép theo sang app\dev\addin\host.hash.
 . (Join-Path $PSScriptRoot "HostHash.ps1")
-$hostHash = Get-HostSourceHash $root
+$staged = Join-Path $artifacts "addin\InnoPro.VnRevitMcp"
+Set-Content (Join-Path $staged "host.hash") (Get-HostSourceHash $root) -Encoding ASCII
 
-$installed = @()
-foreach ($year in $RevitVersions) {
-    if (-not (Test-Path "C:\Program Files\Autodesk\Revit $year\Revit.exe")) { continue }
-
-    $addins = Join-Path $env:APPDATA "Autodesk\Revit\Addins\$year"
-    $target = Join-Path $addins "InnoPro.VnRevitMcp"
-    New-Item -ItemType Directory -Force $addins | Out-Null
-    if (Test-Path $target) { Remove-Item $target -Recurse -Force }
-    Copy-Item (Join-Path $artifacts "addin\InnoPro.VnRevitMcp") $target -Recurse
-    Copy-Item (Join-Path $artifacts "addin\InnoPro.VnRevitMcp.addin") $addins -Force
-    Set-Content (Join-Path $target "host.hash") $hostHash -Encoding ASCII
-    $installed += $year
-}
-if ($installed.Count -eq 0) { throw "Không tìm thấy Revit 2025 trở lên trên máy." }
-
-$server = Join-Path $env:LOCALAPPDATA "InnoPro\vn-revit-mcp\server"
-New-Item -ItemType Directory -Force $server | Out-Null
-Copy-Item (Join-Path $artifacts "server\*") $server -Recurse -Force
-$exe = Join-Path $server "vn-revit-mcp.exe"
-
-Write-Host ""
-Write-Host "Đã cài add-in cho Revit: $($installed -join ', ')" -ForegroundColor Green
-Write-Host "MCP server: $exe"
-Write-Host ""
-Write-Host "Kết nối với Claude Code:"
-Write-Host "  claude mcp add vn-revit-mcp --scope user -- `"$exe`""
-Write-Host ""
-Write-Host "Client khác (Claude Desktop, Cursor, VS Code...) dùng cấu hình stdio với command:"
-Write-Host "  $exe"
+& (Join-Path $root "install.ps1") -Source $artifacts -Version dev -NoClients:$NoClients
+if ($LASTEXITCODE) { throw "Cài đặt thất bại." }

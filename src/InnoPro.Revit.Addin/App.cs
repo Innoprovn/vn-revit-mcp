@@ -12,6 +12,7 @@ public sealed class App : IExternalApplication
 
     private volatile CommandRegistry _registry = null!;
     private readonly object _reloadGate = new();
+    private RevitDispatcher _dispatcher = null!;
 
     /// <summary>Danh sách lệnh hiện hành; được thay nguyên khối khi nạp lại.</summary>
     internal CommandRegistry Registry => _registry;
@@ -31,14 +32,20 @@ public sealed class App : IExternalApplication
             _revitVersion = $"{application.ControlledApplication.VersionName} ({application.ControlledApplication.VersionBuild})";
             Log.Info($"Khởi động vn-revit-mcp {Version} trên {_revitVersion}");
 
-            _registry = CommandRegistry.Load(Paths.BundledCommandsDir, Paths.UserCommandsDir);
+            // CommandSet đã build nạp ngay (nhanh). File .cs cần biên dịch thì nạp nền để không làm chậm Revit khởi động.
+            _registry = CommandRegistry.Load(Paths.CommandSetRoots, []);
             WriteManifest();
 
-            Bridge = new PipeBridge(() => _registry, ReloadCommands, new RevitDispatcher(), Status);
+            _dispatcher = new RevitDispatcher();
+            Bridge = new PipeBridge(() => _registry, ReloadCommands, _dispatcher, Status);
             Bridge.Start();
 
+            ButtonRunner.Register();
+            RibbonManager.Initialize(application, _registry);
             application.ViewActivated += OnViewActivated;
-            Ribbon.Build(application);
+
+            if (CommandRegistry.HasScripts(Paths.ScriptRoots))
+                Task.Run(ReloadCommands);
             return Result.Succeeded;
         }
         catch (Exception ex)
@@ -59,23 +66,32 @@ public sealed class App : IExternalApplication
     private void OnViewActivated(object? sender, ViewActivatedEventArgs e) => _activeDocument = e.Document?.Title;
 
     private RevitStatus Status() =>
-        new(Environment.ProcessId, _revitVersion, _activeDocument, Version, Registry.Commands.Count);
+        new(Environment.ProcessId, _revitVersion, _activeDocument, Version, Registry.Commands.Count,
+            Registry.Errors.Count == 0 ? null : Registry.Errors);
 
     /// <summary>
-    /// Nạp lại toàn bộ CommandSet từ đĩa mà không cần tắt Revit. Trả về số lệnh sau khi nạp.
+    /// Nạp lại toàn bộ lệnh (CommandSet và file .cs) từ đĩa mà không cần tắt Revit,
+    /// rồi bổ sung nút ribbon trên luồng chính của Revit.
     /// </summary>
-    internal int ReloadCommands()
+    internal ReloadResult ReloadCommands()
     {
+        CommandRegistry fresh;
         lock (_reloadGate)
         {
-            var fresh = CommandRegistry.Load(Paths.BundledCommandsDir, Paths.UserCommandsDir);
+            fresh = CommandRegistry.Load(Paths.CommandSetRoots, Paths.ScriptRoots);
             var old = _registry;
             _registry = fresh;
             old.Unload();
             WriteManifest();
-            Log.Info("Đã nạp lại CommandSet.");
-            return fresh.Commands.Count;
         }
+
+        _dispatcher.InvokeAsync(app =>
+        {
+            RibbonManager.Sync(app, _registry);
+            return "";
+        }, CancellationToken.None);
+
+        return new ReloadResult(fresh.Commands.Count, fresh.Errors);
     }
 
     /// <summary>Ghi danh mục lệnh để MCP server vẫn liệt kê được tool khi Revit chưa mở.</summary>

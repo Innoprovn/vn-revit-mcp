@@ -8,6 +8,7 @@ public sealed class SelectElements : RevitCommandBase
 {
     public override string Name => "select_elements";
     public override string Category => "Giao diện";
+    public override bool Pinned => true;
     public override string Description =>
         "Chọn các phần tử theo id trong Revit (thay cho vùng chọn hiện tại) và tùy chọn zoom tới chúng. Không sửa mô hình.";
     public override string InputSchema => """

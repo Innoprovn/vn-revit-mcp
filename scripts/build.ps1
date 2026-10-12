@@ -22,7 +22,8 @@ $addin = Join-Path $out "addin\InnoPro.VnRevitMcp"
 New-Item -ItemType Directory -Force $addin | Out-Null
 
 $addinBin = Join-Path $root "src\InnoPro.Revit.Addin\bin\$Configuration\net8.0-windows"
-Copy-Item (Join-Path $addinBin "InnoPro.*.dll"), (Join-Path $addinBin "InnoPro.*.pdb") $addin
+# Gồm cả Roslyn (Microsoft.CodeAnalysis*.dll) để biên dịch file lệnh .cs và nút ribbon.
+Copy-Item (Join-Path $addinBin "*.dll"), (Join-Path $addinBin "InnoPro.*.pdb") $addin
 Copy-Item (Join-Path $addinBin "InnoPro.VnRevitMcp.addin") (Join-Path $out "addin")
 
 # Mỗi project có commandset.json là một CommandSet: chép cả thư mục output vào Commands\<name>.

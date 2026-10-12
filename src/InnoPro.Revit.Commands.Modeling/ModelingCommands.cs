@@ -27,6 +27,7 @@ public sealed class ListFamilyTypes : RevitCommandBase
 {
     public override string Name => "list_family_types";
     public override string Category => "Dựng hình";
+    public override bool Pinned => true;
     public override string Description =>
         "Liệt kê các type có trong dự án theo category (type tường, sàn, cột, dầm, cửa...). " +
         "Gọi trước khi tạo phần tử để lấy đúng tên type ('Family: Type').";
@@ -49,12 +50,11 @@ public sealed class ListFamilyTypes : RevitCommandBase
         var part = Args.GetStringOrDefault(arguments, "name_contains");
         var limit = (int)Args.GetLongOrDefault(arguments, "limit", 200);
 
-        return new FilteredElementCollector(doc).OfCategoryId(category.Id).WhereElementIsElementType()
+        return Table.Of(new FilteredElementCollector(doc).OfCategoryId(category.Id).WhereElementIsElementType()
             .Cast<ElementType>()
             .Select(t => new { element_id = t.Id.Value, name = Lookup.FullName(t), is_active = (t as FamilySymbol)?.IsActive })
             .Where(t => part == null || t.name.Contains(part, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(t => t.name)
-            .Take(limit);
+            .OrderBy(t => t.name), limit);
     }
 }
 

@@ -14,7 +14,7 @@ public sealed class ListSchedules : RevitCommandBase
     public override object? Execute(RevitCommandContext context, JsonElement arguments)
     {
         var doc = context.Document;
-        return new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule)).Cast<ViewSchedule>()
+        return Table.Of(new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule)).Cast<ViewSchedule>()
             .Where(s => !s.IsTemplate && !s.IsTitleblockRevisionSchedule && !s.IsInternalKeynoteSchedule)
             .OrderBy(s => s.Name)
             .Select(s => new
@@ -22,7 +22,7 @@ public sealed class ListSchedules : RevitCommandBase
                 element_id = s.Id.Value,
                 name = s.Name,
                 category = Autodesk.Revit.DB.Category.GetCategory(doc, s.Definition.CategoryId)?.Name,
-            });
+            }));
     }
 }
 
@@ -30,6 +30,7 @@ public sealed class ReadSchedule : RevitCommandBase
 {
     public override string Name => "read_schedule";
     public override string Category => "Dữ liệu";
+    public override RibbonButton? Ribbon => new("Đọc / xuất\nschedule", "▦");
     public override string Description =>
         "Đọc nội dung một schedule như bảng (tiêu đề cột + các dòng, đúng như hiển thị trong Revit). " +
         "Tùy chọn xuất toàn bộ ra file CSV (UTF-8, mở được bằng Excel).";
@@ -37,18 +38,18 @@ public sealed class ReadSchedule : RevitCommandBase
         {
           "type": "object",
           "properties": {
-            "name": { "type": "string", "description": "Tên schedule (xem list_schedules)." },
+            "schedule": { "type": "string", "description": "Tên schedule (xem list_schedules)." },
             "limit": { "type": "integer", "description": "Số dòng tối đa trả về, mặc định 200." },
             "csv_path": { "type": "string", "description": "Đường dẫn file .csv để xuất toàn bộ bảng (tùy chọn)." }
           },
-          "required": ["name"]
+          "required": ["schedule"]
         }
         """;
 
     public override object? Execute(RevitCommandContext context, JsonElement arguments)
     {
         var doc = context.Document;
-        var name = Args.GetString(arguments, "name");
+        var name = Args.GetString(arguments, "schedule");
         var schedules = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule)).Cast<ViewSchedule>().ToList();
         var schedule = schedules.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase))
                        ?? throw new CommandException($"Không có schedule '{name}'.");
@@ -76,8 +77,12 @@ public sealed class ReadSchedule : RevitCommandBase
         {
             name = schedule.Name,
             total_rows = rows.Count,
-            header = rows.FirstOrDefault(),
-            rows = rows.Skip(1).Take(limit),
+            table = new Table
+            {
+                Columns = rows.FirstOrDefault() ?? [],
+                Rows = rows.Skip(1).Take(limit).Select(r => r.Cast<object?>().ToArray()).ToList(),
+                Total = rows.Count - 1 > limit ? rows.Count - 1 : null,
+            },
             csv_path = csvPath,
         };
     }
@@ -90,6 +95,7 @@ public sealed class GetMaterialQuantities : RevitCommandBase
 {
     public override string Name => "get_material_quantities";
     public override string Category => "Dữ liệu";
+    public override RibbonButton? Ribbon => new("Khối lượng\nvật liệu", "m³");
     public override string Description =>
         "Bóc khối lượng theo vật liệu: thể tích (m³) và diện tích (m²) của từng vật liệu, có thể lọc theo category và tầng. " +
         "Ví dụ: khối lượng bê tông cột tầng 1.";
@@ -133,7 +139,7 @@ public sealed class GetMaterialQuantities : RevitCommandBase
         return new
         {
             elements = counted,
-            materials = totals
+            materials = Table.Of(totals
                 .Select(kv => new
                 {
                     material = doc.GetElement(kv.Key)?.Name,
@@ -141,8 +147,7 @@ public sealed class GetMaterialQuantities : RevitCommandBase
                     area_m2 = UnitConvert.SquareFeetToSquareMeters(kv.Value.Area),
                     element_count = kv.Value.Count,
                 })
-                .OrderByDescending(m => m.volume_m3)
-                .ToList(),
+                .OrderByDescending(m => m.volume_m3)),
         };
     }
 }

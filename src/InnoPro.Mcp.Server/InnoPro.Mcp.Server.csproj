@@ -17,4 +17,9 @@
     <ProjectReference Include="..\InnoPro.Bridge\InnoPro.Bridge.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Công thức quy trình (MCP prompts): file Markdown, ai cũng đóng góp được. -->
+    <None Update="recipes\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

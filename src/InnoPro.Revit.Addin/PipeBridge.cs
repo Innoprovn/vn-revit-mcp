@@ -13,12 +13,12 @@ internal sealed class PipeBridge
     private static readonly TimeSpan InvokeTimeout = TimeSpan.FromMinutes(2);
 
     private readonly Func<CommandRegistry> _registry;
-    private readonly Func<int> _reload;
+    private readonly Func<ReloadResult> _reload;
     private readonly RevitDispatcher _dispatcher;
     private readonly Func<RevitStatus> _status;
     private CancellationTokenSource? _cts;
 
-    public PipeBridge(Func<CommandRegistry> registry, Func<int> reload, RevitDispatcher dispatcher, Func<RevitStatus> status)
+    public PipeBridge(Func<CommandRegistry> registry, Func<ReloadResult> reload, RevitDispatcher dispatcher, Func<RevitStatus> status)
     {
         _registry = registry;
         _reload = reload;
@@ -108,7 +108,7 @@ internal sealed class PipeBridge
             {
                 BridgeProtocol.MethodPing => Ok(request, _status()),
                 BridgeProtocol.MethodListCommands => Ok(request, DescribeCommands(_registry())),
-                BridgeProtocol.MethodReloadCommands => Ok(request, new { command_count = _reload() }),
+                BridgeProtocol.MethodReloadCommands => Ok(request, _reload()),
                 BridgeProtocol.MethodInvoke => await Invoke(request, token),
                 _ => Fail(request.Id, $"Không hỗ trợ phương thức '{request.Method}'."),
             };
@@ -130,7 +130,7 @@ internal sealed class PipeBridge
         timeout.CancelAfter(InvokeTimeout);
 
         Log.Info($"Chạy lệnh {invoke.Name}");
-        var work = _dispatcher.InvokeAsync(app => CommandRunner.Run(app, loaded, invoke.Arguments, timeout.Token), timeout.Token);
+        var work = _dispatcher.InvokeAsync(app => CommandRunner.RunForBridge(app, loaded, invoke.Arguments, timeout.Token), timeout.Token);
         try
         {
             var json = await work.WaitAsync(timeout.Token);
@@ -151,7 +151,8 @@ internal sealed class PipeBridge
             c.Command.Category,
             c.CommandSet,
             c.Command.TransactionMode.ToString(),
-            JsonDocument.Parse(c.Command.InputSchema).RootElement))
+            JsonDocument.Parse(c.Command.InputSchema).RootElement,
+            c.Command.Pinned))
         .ToList();
 
     private static BridgeResponse Ok(BridgeRequest request, object result) =>

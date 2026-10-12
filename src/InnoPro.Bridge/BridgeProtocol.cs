@@ -41,6 +41,18 @@ public sealed record CommandDescriptor(
     string Category,
     string CommandSet,
     string TransactionMode,
-    JsonElement InputSchema);
+    JsonElement InputSchema,
+    bool Pinned = false);
 
-public sealed record RevitStatus(int ProcessId, string RevitVersion, string? ActiveDocument, string AddinVersion, int CommandCount);
+/// <summary>Lỗi khi nạp một CommandSet hoặc biên dịch một file lệnh .cs.</summary>
+public sealed record LoadError(string Source, string Message);
+
+public sealed record RevitStatus(
+    int ProcessId,
+    string RevitVersion,
+    string? ActiveDocument,
+    string AddinVersion,
+    int CommandCount,
+    IReadOnlyList<LoadError>? LoadErrors = null);
+
+public sealed record ReloadResult(int CommandCount, IReadOnlyList<LoadError> Errors);

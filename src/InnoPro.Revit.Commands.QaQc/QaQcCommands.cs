@@ -8,6 +8,7 @@ public sealed class GetWarnings : RevitCommandBase
 {
     public override string Name => "get_warnings";
     public override string Category => "QA-QC";
+    public override RibbonButton? Ribbon => new("Cảnh báo\nmô hình", "⚠");
     public override string Description =>
         "Liệt kê cảnh báo (Warnings) của mô hình, gom theo nội dung, sắp theo số lượng giảm dần, kèm vài id phần tử mẫu. " +
         "Dùng để đánh giá chất lượng mô hình hoặc tìm lỗi trùng, chồng, không nối.";
@@ -45,7 +46,7 @@ public sealed class GetWarnings : RevitCommandBase
             .OrderByDescending(g => g.count)
             .ToList();
 
-        return new { total = warnings.Count, types = groups.Count, warnings = groups.Take(limit) };
+        return new { total = warnings.Count, types = groups.Count, warnings = Table.Of(groups, limit) };
     }
 }
 
@@ -53,6 +54,7 @@ public sealed class FindDuplicateElements : RevitCommandBase
 {
     public override string Name => "find_duplicate_elements";
     public override string Category => "QA-QC";
+    public override RibbonButton? Ribbon => new("Phần tử\ntrùng", "⧉");
     public override string Description =>
         "Tìm phần tử bị trùng: cùng category, cùng type, cùng vị trí (điểm đặt hoặc đường định vị) trong sai số cho trước. " +
         "Hay gặp với cột, dầm, tường copy chồng lên nhau. Mỗi nhóm trả về danh sách id, giữ id đầu và xóa các id còn lại nếu cần.";
@@ -90,12 +92,12 @@ public sealed class FindDuplicateElements : RevitCommandBase
         {
             duplicate_groups = groups.Count,
             redundant_elements = groups.Sum(g => g.Count - 1),
-            groups = groups.Take(limit).Select(g => new
+            groups = Table.Of(groups.Select(g => new
             {
                 category = g[0].Category?.Name,
                 type_name = ElementInfo.TypeName(doc, g[0]),
                 element_ids = g.Select(e => e.Id.Value),
-            }),
+            }), limit),
         };
     }
 
@@ -119,6 +121,7 @@ public sealed class CheckMissingParameters : RevitCommandBase
 {
     public override string Name => "check_missing_parameters";
     public override string Category => "QA-QC";
+    public override RibbonButton? Ribbon => new("Tham số\ntrống", "∅");
     public override string Description =>
         "Kiểm tra phần tử của một category có điền đủ các tham số yêu cầu không (ví dụ Mark, Comments, tham số dự án). " +
         "Trả về số phần tử thiếu theo từng tham số và id mẫu.";
@@ -167,6 +170,7 @@ public sealed class FindClashes : RevitCommandBase
 
     public override string Name => "find_clashes";
     public override string Category => "QA-QC";
+    public override RibbonButton? Ribbon => new("Va chạm", "✕");
     public override string Description =>
         "Tìm va chạm hình học giữa hai category trong mô hình hiện tại (ví dụ ống gió với dầm). " +
         "Dùng giao khối thật (ElementIntersectsElementFilter), không chỉ hộp bao. Tối đa 5000 phần tử nhóm A.";
@@ -200,7 +204,7 @@ public sealed class FindClashes : RevitCommandBase
         if (sourceList.Count > MaxSourceElements)
             throw new CommandException($"Nhóm A có hơn {MaxSourceElements} phần tử. Hãy giới hạn theo 'level'.");
 
-        var clashes = new List<object>();
+        var clashes = new List<(long element_a, long element_b)>();
         var clashingA = 0;
         var skipped = 0;
         foreach (var a in sourceList)
@@ -231,7 +235,7 @@ public sealed class FindClashes : RevitCommandBase
             foreach (var b in hits)
             {
                 if (clashes.Count >= limit) break;
-                clashes.Add(new { element_a = a.Id.Value, element_b = b.Value });
+                clashes.Add((a.Id.Value, b.Value));
             }
         }
 
@@ -242,8 +246,7 @@ public sealed class FindClashes : RevitCommandBase
             checked_a = sourceList.Count,
             skipped_no_solid = skipped,
             clashing_a = clashingA,
-            returned = clashes.Count,
-            clashes,
+            clashes = Table.Of(clashes.Select(c => new { c.element_a, c.element_b })),
         };
     }
 }
