@@ -77,3 +77,17 @@ public sealed class ShowCommandsCommand : IExternalCommand
         return Result.Succeeded;
     }
 }
+
+[Transaction(TransactionMode.ReadOnly)]
+public sealed class ShowChatCommand : IExternalCommand
+{
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+    {
+        var app = App.Instance;
+        if (app == null) return Result.Failed;
+
+        app.ChatPane.EnsureLoaded(app.ChatHost);
+        commandData.Application.GetDockablePane(ChatPane.Id).Show();
+        return Result.Succeeded;
+    }
+}

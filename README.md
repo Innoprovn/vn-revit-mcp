@@ -1,145 +1,127 @@
 # vn-revit-mcp
 
-**Cho AI điều khiển Autodesk Revit.** Mã nguồn mở, miễn phí, do [InnoPro](https://innopro.vn) phát triển.
+**Cho AI làm việc với Autodesk Revit.** Mã nguồn mở, miễn phí, do [InnoPro](https://innopro.vn) phát triển.
 
-vn-revit-mcp đưa các lệnh Revit thành công cụ theo chuẩn [Model Context Protocol (MCP)](https://modelcontextprotocol.io),
-nên dùng được với mọi AI client hỗ trợ MCP qua stdio: Claude (Desktop, Code), Cursor, VS Code, LM Studio...,
-kể cả model chạy local trên máy.
-
-> 🚧 **Đang ở giai đoạn P0 (nền móng).** Chưa có khung chat trong Revit. Xem [lộ trình](#lộ-trình).
-
-## Tính năng
-
-- **Tab InnoPro** riêng trong Revit, bật/tắt quyền điều khiển của AI bằng một nút.
-- **CommandSet dạng plugin:** mỗi bộ lệnh là một DLL, thêm lệnh không cần sửa MCP server.
-- **Chạy hoàn toàn trên máy bạn:** add-in và MCP server nói chuyện qua named pipe, chỉ cùng tài khoản
-  Windows mới kết nối được, không mở cổng mạng nào.
-- **An toàn khi sửa mô hình:** lệnh sửa mô hình được bọc trong Transaction, lỗi thì rollback, Undo được trong Revit.
-- Hỗ trợ **Revit 2025 trở lên**.
-
-## Kiến trúc
-
-```
-AI client ──MCP (stdio)──▶ vn-revit-mcp.exe ──named pipe──▶ Add-in InnoPro (trong Revit) ──▶ Revit API
-                                                               └─ CommandSet: Core, Rebar, QA-QC, ...
-```
-
-| Thành phần | Thư mục | Vai trò |
-|---|---|---|
-| `InnoPro.Revit.Sdk` | `src/InnoPro.Revit.Sdk` | Interface để viết lệnh (`IRevitCommand`, `Args`, `UnitConvert`) |
-| `InnoPro.Revit.Addin` | `src/InnoPro.Revit.Addin` | Add-in: tab InnoPro, nạp CommandSet, chạy lệnh trên luồng Revit |
-| `InnoPro.Bridge` | `src/InnoPro.Bridge` | Giao thức named pipe dùng chung |
-| `InnoPro.Mcp.Server` | `src/InnoPro.Mcp.Server` | MCP server, công bố lệnh thành tool |
-| `InnoPro.Revit.Commands.Core` | `src/InnoPro.Revit.Commands.Core` | CommandSet cơ bản |
-
-Chi tiết: [docs/kien-truc.md](docs/kien-truc.md).
-
-## Lệnh hiện có (CommandSet Core)
-
-| Tool | Việc làm |
-|---|---|
-| `revit_status` | Kiểm tra kết nối tới Revit |
-| `get_document_info` | Thông tin tài liệu đang mở |
-| `get_current_view_info` | Thông tin view đang mở |
-| `get_selected_elements` | Phần tử đang chọn |
-| `get_element_parameters` | Tham số của một phần tử |
-| `list_levels` | Danh sách tầng và cao độ (mm) |
-| `list_views` | Danh sách view, lọc theo loại và tên |
-| `list_sheets` | Danh sách sheet và view đặt trên sheet |
-| `find_elements` | Tìm phần tử theo category, tầng, view, giá trị tham số |
-| `analyze_model_statistics` | Thống kê phần tử theo category |
-| `select_elements` | Chọn và zoom tới phần tử theo id |
-| `set_parameters` | Sửa một tham số trên nhiều phần tử (Undo được) |
-
-**CommandSet Code**
-
-| Tool | Việc làm |
-|---|---|
-| `run_csharp` | Chạy mã C# Revit API. Mặc định **chỉ đọc** (mọi thay đổi bị hủy); chế độ `write` bật hộp thoại để người dùng duyệt trong Revit. Không cần thì xóa thư mục `Commands\Code` để tắt hẳn. |
+- **Một lệnh cài**, tự kết nối mọi AI trên máy: Claude, Cursor, VS Code Copilot, Gemini CLI, Codex, LM Studio...
+- **Chat ngay trong Revit** với Claude, OpenAI, Gemini, OpenRouter, hoặc AI chạy hoàn toàn trên máy (Ollama, LM Studio).
+- **Mỗi lệnh dùng được hai cách:** người bấm nút trên tab **InnoPro** (form nhập tự sinh), hoặc AI gọi.
+- **Viết lệnh mới bằng một file `.cs`**, không cần build: thả vào thư mục, bấm *Nạp lại lệnh*. Hoặc nhờ AI viết.
+- **Tiết kiệm token:** AI chỉ thấy vài lệnh hay dùng, tra thêm khi cần; kết quả trả dạng bảng gọn.
+- Chạy trên máy bạn, không mở cổng mạng. Lệnh sửa mô hình Undo được. Revit **2025 trở lên**.
 
 ## Cài đặt
 
-Cần: Windows, Revit 2025 trở lên. Không cần quyền admin, không cần đóng Revit
-(nếu Revit đang mở thì bản mới có hiệu lực từ lần mở Revit sau).
-
-Mở **PowerShell** và chạy:
+Mở **PowerShell** và chạy (không cần quyền admin, Revit đang mở cũng được):
 
 ```powershell
 irm https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/install.ps1 | iex
 ```
 
-Hoặc tải file `vn-revit-mcp-<phiên bản>-win-x64.zip` ở mục [Releases](https://github.com/Innoprovn/vn-revit-mcp/releases),
+Hoặc tải `vn-revit-mcp-<phiên bản>-win-x64.zip` ở [Releases](https://github.com/Innoprovn/vn-revit-mcp/releases),
 giải nén rồi bấm đúp **`Cai-dat.cmd`**.
 
-Bộ cài tự kết nối mọi AI client có trên máy: Claude Desktop, Claude Code, Cursor, VS Code (GitHub Copilot),
-Windsurf, Gemini CLI, LM Studio, Codex CLI, Cline. Khởi động lại AI client, mở Revit (tab **InnoPro**),
-mở một dự án rồi hỏi AI: *"Mô hình Revit đang mở có bao nhiêu phần tử?"*
+Xong: mở Revit, tab **InnoPro**. Dùng theo một trong hai cách:
+- **Chat trong Revit:** bấm **Chat AI**, chọn nhà cung cấp, nhập API key (hoặc chọn Ollama/LM Studio, không cần key).
+- **AI bên ngoài** (Claude Desktop, Cursor...): khởi động lại ứng dụng AI rồi hỏi *"Mô hình Revit đang mở có bao nhiêu cột?"*
 
 | Việc | Lệnh |
 |---|---|
 | Xem AI client nào đã kết nối | `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" clients` |
 | Kết nối lại (sau khi cài thêm AI client) | `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" setup` |
 | Cập nhật lên bản mới | chạy lại lệnh cài một dòng |
-| Gỡ cài đặt | `uninstall.ps1` trong file zip (thêm `-Purge` để xóa cả lệnh và script tự thêm) |
+| Gỡ cài đặt | `uninstall.ps1` trong file zip (thêm `-Purge` để xóa cả lệnh tự thêm) |
 
-Với AI client khác, khai báo MCP server kiểu **stdio** với command
-`%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe` (không cần tham số).
-Mở nhiều phiên Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
+AI client khác: khai báo MCP server kiểu **stdio**, command `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe`.
+Mở nhiều Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
 
-## Cho nhà phát triển
+## Có những gì
 
-Cần thêm [.NET SDK 8](https://dotnet.microsoft.com/download).
+| Nhóm | Lệnh | Nút trên ribbon |
+|---|---|---|
+| Truy vấn | thông tin dự án/view, phần tử đang chọn, tham số, tầng, view, sheet, tìm phần tử, thống kê mô hình | Thống kê mô hình, Tham số phần tử |
+| Tham số | sửa một tham số trên nhiều phần tử | Sửa tham số |
+| QA-QC | cảnh báo Revit, phần tử trùng, tham số còn trống, va chạm giữa hai category | Cảnh báo, Phần tử trùng, Tham số trống, Va chạm |
+| Dựng hình | tạo tầng, lưới trục, tường, dầm, sàn, đặt cột/móng/family; liệt kê type | |
+| Dữ liệu | đọc schedule, xuất CSV, khối lượng vật liệu | Đọc/xuất schedule, Khối lượng vật liệu |
+| Nâng cao | `run_csharp`: AI chạy mã C#; mặc định chỉ đọc, muốn sửa mô hình phải được duyệt trong Revit | |
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\install-dev.ps1
-```
+Mọi lệnh khác (không có nút lớn) nằm trong menu **Lệnh khác** của từng nhóm.
 
-Script build rồi gọi chính `install.ps1` với phiên bản `dev`, nên máy dev dùng đúng bố cục như người dùng
-(`%LOCALAPPDATA%\InnoPro\vn-revit-mcp\app\dev`, junction `current`) và cũng tự kết nối AI client
-(thêm `-NoClients` để bỏ qua). Đóng gói bản phát hành: `scripts\package.ps1` → `artifacts\release\*.zip`.
-
-**Sửa lệnh không cần tắt Revit:** CommandSet được nạp từ bộ nhớ nên không khóa file. Sau khi sửa mã lệnh:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\dev-reload.ps1
-```
-
-Script build, chép CommandSet vào bản đã cài và bảo Revit đang chạy nạp lại (hoặc bấm **Nạp lại lệnh** trên tab InnoPro,
-hoặc để AI gọi tool `reload_commands`). Chỉ khi sửa phần lõi (Addin, Sdk, Bridge) mới cần chạy lại `install-dev.ps1`
-rồi mở lại Revit.
+**Công thức** (chọn trong AI client hỗ trợ MCP prompts, ví dụ gõ `/` trong Claude): `kiem-tra-chat-luong`,
+`boc-khoi-luong`, `dung-tang-luoi-truc`, `viet-lenh-moi`. Mỗi công thức là một file Markdown, ai cũng viết thêm được
+(thả vào `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\Recipes\`).
 
 ## Viết lệnh mới
 
-Xem [docs/viet-lenh-moi.md](docs/viet-lenh-moi.md). Ví dụ tối thiểu:
+Cách nhanh nhất: một file `.cs`, không cần project hay build.
 
 ```csharp
 public sealed class CountWalls : RevitCommandBase
 {
     public override string Name => "count_walls";
+    public override string Category => "Của tôi";
     public override string Description => "Đếm số tường trong mô hình.";
+    public override RibbonButton Ribbon => new("Đếm\ntường", "#");   // có nút trên ribbon
 
-    public override object? Execute(RevitCommandContext context, JsonElement arguments) =>
+    public override object Execute(RevitCommandContext context, JsonElement arguments) =>
         new { count = new FilteredElementCollector(context.Document).OfClass(typeof(Wall)).GetElementCount() };
 }
 ```
 
+Thả vào `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\Scripts\`, bấm **Nạp lại lệnh**. Lệnh có nút, có form nhập, và AI gọi được ngay.
+Không biết code: dùng công thức `viet-lenh-moi` hoặc nói với AI *"viết cho tôi lệnh vn-revit-mcp ..."*.
+
+Hướng dẫn đầy đủ (3 cấp: file `.cs`, CommandSet, đóng góp): [docs/viet-lenh-moi.md](docs/viet-lenh-moi.md).
+AI lập trình (Claude Code, Cursor, Copilot, Codex...) đọc [AGENTS.md](AGENTS.md).
+
+## Kiến trúc
+
+```
+AI client ──MCP (stdio)──▶ vn-revit-mcp.exe ──named pipe──▶ Add-in InnoPro (trong Revit) ──▶ Revit API
+Khung chat trong Revit ──────────────────────────────────────▲      ├─ CommandSet (DLL)
+                                                                    └─ Scripts (*.cs, tự biên dịch)
+```
+
+| Thành phần | Vai trò |
+|---|---|
+| `src/InnoPro.Revit.Sdk` | Interface viết lệnh: `RevitCommandBase`, `Args`, `Table`, `Lookup`, `UnitConvert` |
+| `src/InnoPro.Revit.Addin` | Host trong Revit: ribbon tự sinh, form tự sinh, nạp lệnh nóng, cầu nối, khung chat |
+| `src/InnoPro.Revit.Chat` | Module chat (nạp riêng): Claude qua SDK Anthropic, các AI khác qua API OpenAI-compatible |
+| `src/InnoPro.Bridge` | Giao thức named pipe, tra cứu lệnh dùng chung |
+| `src/InnoPro.Mcp.Server` | MCP server, công thức, lệnh `setup` cấu hình AI client |
+| `src/InnoPro.Revit.Commands.*` | CommandSet đi kèm: Core, QA-QC, Modeling, Data, Code |
+
+Chi tiết: [docs/kien-truc.md](docs/kien-truc.md).
+
+## Cho nhà phát triển
+
+Cần [.NET SDK 8](https://dotnet.microsoft.com/download).
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-dev.ps1   # build + cài bản "dev", cùng bố cục với người dùng
+powershell -ExecutionPolicy Bypass -File scripts\dev-reload.ps1    # sửa CommandSet: Revit đang mở nạp lại ngay
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1       # đóng gói artifacts\release\*.zip
+```
+
+Chỉ khi sửa phần lõi (Addin, Sdk, Bridge) mới cần chạy lại `install-dev.ps1` rồi mở lại Revit.
+
 ## Lộ trình
 
-| Giai đoạn | Nội dung |
-|---|---|
-| **P0 (đang làm)** | Add-in, tab InnoPro, nạp CommandSet, cầu nối, MCP server, lệnh truy vấn cơ bản |
-| P1 | Thêm CommandSet: Kiến trúc, Kết cấu, Rebar, QA-QC, Bản vẽ, Dữ liệu; chạy mã C# có kiểm soát |
-| P2 | Khung chat trong Revit: Claude, OpenAI, Gemini, Ollama, LM Studio |
-| P3 | Bộ cài một dòng, tự cập nhật, đăng MCP Registry |
-| P4 | App chat độc lập ngoài Revit |
+| Giai đoạn | Nội dung | Trạng thái |
+|---|---|---|
+| P0 | Add-in, tab InnoPro, cầu nối, MCP server | ✅ |
+| P1 | CommandSet Core, QA-QC, Modeling, Data, Code; lệnh từ file `.cs`; nút và form tự sinh; tiết kiệm token | ✅ (đang mở rộng) |
+| P2 | Khung chat trong Revit đa nhà cung cấp | ✅ bản đầu |
+| P3 | Bộ cài một dòng, tự cấu hình AI client; phát hành GitHub, MCP Registry, tự cập nhật | 🔄 |
+| P4 | Bộ lệnh chuyên sâu (Kết cấu, Rebar, Bản vẽ, vẽ từ CAD); cửa hàng lệnh cộng đồng | ⏳ |
 
 ## Đóng góp
 
-Mọi người đều có thể đóng góp CommandSet mới hoặc cải tiến lệnh. Mở issue hoặc pull request trên GitHub.
+Mọi người đều có thể đóng góp lệnh, CommandSet, công thức. Mở issue hoặc pull request.
 
 ## License
 
-[GPLv3](LICENSE) kèm [ngoại lệ plugin](LICENSE-EXCEPTION.md): CommandSet của bạn được giữ license riêng
+[GPLv3](LICENSE) kèm [ngoại lệ plugin](LICENSE-EXCEPTION.md): CommandSet và file lệnh của bạn được giữ license riêng
 (kể cả đóng mã nguồn), và được phép chạy cùng Autodesk Revit.
 
 Một số lệnh tham khảo đặc tả từ [mcp-servers-for-revit](https://github.com/mcp-servers-for-revit) (MIT).
@@ -148,10 +130,10 @@ Một số lệnh tham khảo đặc tả từ [mcp-servers-for-revit](https://g
 
 # English
 
-**vn-revit-mcp** lets any MCP-capable AI client (Claude, Cursor, VS Code, local LLMs...) drive Autodesk Revit 2025+.
-A Revit add-in adds an **InnoPro** ribbon tab, loads plugin **Command Sets**, and talks to a local MCP server
-over a per-user named pipe. Licensed GPLv3 with a plugin exception.
-Install (no admin rights): `irm https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/install.ps1 | iex`,
-or download the release zip and double-click `Cai-dat.cmd`. The installer registers the server with every detected
-AI client (Claude Desktop/Code, Cursor, VS Code, Windsurf, Gemini CLI, LM Studio, Codex CLI, Cline).
-Developers: `scripts/install-dev.ps1` (same layout, version `dev`) and `scripts/dev-reload.ps1`.
+**vn-revit-mcp** lets AI work with Autodesk Revit 2025+. One-line install (no admin):
+`irm https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/install.ps1 | iex` — it registers the MCP server
+with every detected AI client (Claude Desktop/Code, Cursor, VS Code, Windsurf, Gemini CLI, LM Studio, Codex CLI, Cline).
+Inside Revit, an **InnoPro** tab offers a chat pane (Claude via the Anthropic SDK; OpenAI, Gemini, OpenRouter, Ollama,
+LM Studio via OpenAI-compatible APIs) and a button for every command with an auto-generated input form.
+Add a command by dropping a single `.cs` file into the Scripts folder — it is compiled in Revit and hot-reloaded.
+Licensed GPLv3 with a plugin exception. See [AGENTS.md](AGENTS.md) for AI coding agents.

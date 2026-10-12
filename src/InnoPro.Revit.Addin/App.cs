@@ -17,6 +17,9 @@ public sealed class App : IExternalApplication
     /// <summary>Danh sách lệnh hiện hành; được thay nguyên khối khi nạp lại.</summary>
     internal CommandRegistry Registry => _registry;
     internal PipeBridge Bridge { get; private set; } = null!;
+    internal ChatPane ChatPane { get; } = new();
+    internal ChatHost ChatHost { get; private set; } = null!;
+    internal string? ActiveDocumentTitle => _activeDocument;
 
     internal static string Version { get; } =
         typeof(App).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "0.0.0";
@@ -39,6 +42,9 @@ public sealed class App : IExternalApplication
             _dispatcher = new RevitDispatcher();
             Bridge = new PipeBridge(() => _registry, ReloadCommands, _dispatcher, Status);
             Bridge.Start();
+
+            ChatHost = new ChatHost(this, _dispatcher);
+            application.RegisterDockablePane(ChatPane.Id, "InnoPro AI", ChatPane);
 
             ButtonRunner.Register();
             RibbonManager.Initialize(application, _registry);

@@ -29,6 +29,8 @@ internal static class RibbonManager
 
         var panel = app.CreateRibbonPanel(TabName, AiPanel);
         var assembly = typeof(RibbonManager).Assembly.Location;
+        panel.AddItem(Button("InnoPro.Mcp.Chat", "Chat\nAI", assembly, typeof(ShowChatCommand).FullName!, "✦",
+            "Mở khung chat AI ngay trong Revit: Claude, OpenAI, Gemini, hoặc AI chạy trên máy (Ollama, LM Studio)."));
         panel.AddItem(Button("InnoPro.Mcp.Toggle", "MCP\nBật/Tắt", assembly, typeof(ToggleBridgeCommand).FullName!, "AI",
             "Bật hoặc tắt kết nối cho AI (MCP). Khi tắt, không AI nào điều khiển được Revit."));
         panel.AddItem(Button("InnoPro.Mcp.Commands", "Lệnh\nAI", assembly, typeof(ShowCommandsCommand).FullName!, "≡",

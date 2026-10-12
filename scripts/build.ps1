@@ -26,6 +26,14 @@ $addinBin = Join-Path $root "src\InnoPro.Revit.Addin\bin\$Configuration\net8.0-w
 Copy-Item (Join-Path $addinBin "*.dll"), (Join-Path $addinBin "InnoPro.*.pdb") $addin
 Copy-Item (Join-Path $addinBin "InnoPro.VnRevitMcp.addin") (Join-Path $out "addin")
 
+# Module chat: nạp trong AssemblyLoadContext riêng (thư viện riêng, ví dụ SDK Anthropic và System.Text.Json mới hơn).
+$chatBin = Join-Path $root "src\InnoPro.Revit.Chat\bin\$Configuration\net8.0-windows"
+$chat = Join-Path $addin "Modules\Chat"
+New-Item -ItemType Directory -Force $chat | Out-Null
+Copy-Item (Join-Path $chatBin "*.dll") $chat
+Copy-Item (Join-Path $chatBin "InnoPro.Revit.Chat.pdb") $chat -ErrorAction SilentlyContinue
+Write-Host "Module Chat"
+
 # Mỗi project có commandset.json là một CommandSet: chép cả thư mục output vào Commands\<name>.
 foreach ($manifest in Get-ChildItem (Join-Path $root "src") -Recurse -Filter commandset.json | Where-Object { $_.FullName -match '\\bin\\' -and $_.FullName -match "\\$Configuration\\" }) {
     $name = (Get-Content $manifest.FullName -Raw -Encoding UTF8 | ConvertFrom-Json).name

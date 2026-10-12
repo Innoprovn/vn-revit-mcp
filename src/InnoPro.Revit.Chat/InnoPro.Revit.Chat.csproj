@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWPF>true</UseWPF>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Description>Khung chat AI trong Revit của vn-revit-mcp: Claude, OpenAI, Gemini, Ollama, LM Studio...</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Nạp trong AssemblyLoadContext riêng nên thư viện này không xung đột với add-in khác trong Revit. -->
+    <PackageReference Include="Anthropic" Version="12.55.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Bridge do host cung cấp lúc chạy (kiểu IRevitHost phải dùng chung), không chép kèm. -->
+    <ProjectReference Include="..\InnoPro.Bridge\InnoPro.Bridge.csproj" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+</Project>
