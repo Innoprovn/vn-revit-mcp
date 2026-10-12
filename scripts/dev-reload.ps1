@@ -9,6 +9,8 @@
   (Revit đang mở thì bản mới có hiệu lực từ lần mở Revit sau).
 #>
 
+param([switch]$SkipBuild)
+
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $staged = Join-Path $root "artifacts\addin\InnoPro.VnRevitMcp"
@@ -18,7 +20,14 @@ if (-not (Test-Path (Join-Path $installed "InnoPro.Revit.Addin.dll"))) {
     throw "Chưa cài vn-revit-mcp tại $installed. Chạy install-dev.ps1 trước."
 }
 
-& (Join-Path $PSScriptRoot "build.ps1")
+if (-not $SkipBuild) { & (Join-Path $PSScriptRoot "build.ps1") }
+
+# Trong ứng dụng MSIX (ví dụ Claude Desktop), ghi vào %LOCALAPPDATA% bị chuyển hướng: chép ở ngoài qua Explorer.
+. (Join-Path $PSScriptRoot "OutsidePackage.ps1")
+if (Test-InPackage) {
+    Invoke-OutsidePackage $PSCommandPath @("-SkipBuild")
+    return
+}
 
 . (Join-Path $PSScriptRoot "HostHash.ps1")
 $hostHash = Get-HostSourceHash $root

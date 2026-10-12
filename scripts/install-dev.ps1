@@ -27,5 +27,15 @@ if (-not $SkipBuild) { & (Join-Path $PSScriptRoot "build.ps1") }
 $staged = Join-Path $artifacts "addin\InnoPro.VnRevitMcp"
 Set-Content (Join-Path $staged "host.hash") (Get-HostSourceHash $root) -Encoding ASCII
 
-& (Join-Path $root "install.ps1") -Source $artifacts -Version dev -NoClients:$NoClients
+# Chạy từ trong ứng dụng MSIX (ví dụ Claude Desktop) thì file ghi vào %LOCALAPPDATA% bị chuyển hướng,
+# Revit không thấy: nhờ Explorer chạy bộ cài ở ngoài.
+. (Join-Path $PSScriptRoot "OutsidePackage.ps1")
+$installArgs = @("-Source", $artifacts, "-Version", "dev")
+if ($NoClients) { $installArgs += "-NoClients" }
+if (Test-InPackage) {
+    Invoke-OutsidePackage (Join-Path $root "install.ps1") $installArgs
+    return
+}
+
+& (Join-Path $root "install.ps1") @installArgs
 if ($LASTEXITCODE) { throw "Cài đặt thất bại." }
