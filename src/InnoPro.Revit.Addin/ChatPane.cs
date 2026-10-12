@@ -17,6 +17,7 @@ internal sealed class ChatPane : IDockablePaneProvider
 
     private readonly ContentControl _root = new()
     {
+        Background = System.Windows.Media.Brushes.White,
         Content = new TextBlock { Text = "Bấm nút Chat AI trên tab InnoPro để bắt đầu.", Margin = new Thickness(12), TextWrapping = TextWrapping.Wrap },
     };
     private bool _loaded;

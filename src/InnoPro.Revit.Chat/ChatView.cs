@@ -24,8 +24,8 @@ internal sealed class ChatView : UserControl
     private readonly ChatEngine _engine;
     private readonly ChatSettings _settings;
 
-    private readonly ComboBox _providerBox = new() { MinWidth = 150, Margin = new Thickness(0, 0, 4, 0) };
-    private readonly ComboBox _modelBox = new() { MinWidth = 140, IsEditable = true, Margin = new Thickness(0, 0, 4, 0) };
+    private readonly ComboBox _providerBox = new() { MinWidth = 150 };
+    private readonly ComboBox _modelBox = new() { IsEditable = true };
     private readonly TextBox _baseUrlBox = new() { Margin = new Thickness(0, 4, 0, 0) };
     private readonly StackPanel _baseUrlRow = new();
     private readonly TextBlock _hint = new() { TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = Muted, Margin = new Thickness(0, 4, 0, 0) };
@@ -84,8 +84,12 @@ internal sealed class ChatView : UserControl
         row.Children.Add(key);
         row.Children.Add(models);
         row.Children.Add(_providerBox);
-        row.Children.Add(_modelBox);
         top.Children.Add(row);
+        var modelRow = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
+        var modelLabel = new TextBlock { Text = "Model", Width = 52, VerticalAlignment = VerticalAlignment.Center, Foreground = Muted, FontSize = 11 };
+        modelRow.Children.Add(modelLabel);
+        modelRow.Children.Add(_modelBox);
+        top.Children.Add(modelRow);
         _baseUrlRow.Children.Add(new TextBlock { Text = "Base URL", FontSize = 11, Foreground = Muted, Margin = new Thickness(0, 4, 0, 0) });
         _baseUrlRow.Children.Add(_baseUrlBox);
         top.Children.Add(_baseUrlRow);
