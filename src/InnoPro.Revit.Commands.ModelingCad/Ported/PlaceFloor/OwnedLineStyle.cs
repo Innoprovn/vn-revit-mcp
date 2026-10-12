@@ -2,10 +2,10 @@ using Autodesk.Revit.DB;
 
 namespace InnoPro.Revit.Commands.ModelingCad.PlaceFloor;
 
-/// <summary>Quản lý 1 Line Style riêng ("BIMTech - Tim dầm (Vẽ Sàn)", subcategory của category Lines) để đánh dấu DetailLine do tool này vẽ ra ở Bước 1 — nhờ vậy Bước 2 (Tạo sàn từ line) đọc lại ĐÚNG các line này, không lẫn với CAD/DetailLine khác có sẵn trong view.</summary>
+/// <summary>Quản lý 1 Line Style riêng ("InnoPro - Tim dầm (Vẽ sàn)", subcategory của category Lines) để đánh dấu DetailLine do tool này vẽ ra ở Bước 1 — nhờ vậy Bước 2 (Tạo sàn từ line) đọc lại ĐÚNG các line này, không lẫn với CAD/DetailLine khác có sẵn trong view.</summary>
 internal static class OwnedLineStyle
 {
-    private const string StyleName = "BIMTech - Tim dầm (Vẽ Sàn)";
+    private const string StyleName = "InnoPro - Tim dầm (Vẽ sàn)";
 
     /// <summary>Lấy GraphicsStyle đã có, hoặc tạo mới nếu chưa có — PHẢI gọi trong Transaction.</summary>
     public static GraphicsStyle EnsureStyle(Document doc)

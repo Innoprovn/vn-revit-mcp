@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Autodesk.Revit.DB;
 using InnoPro.Revit.Commands.ModelingCad.Common;
 using InnoPro.Revit.Sdk;
@@ -149,6 +149,7 @@ public sealed class PlaceDoorsWindowsFromCad : RevitCommandBase
           "properties": {
             "cad_id": { "type": "integer", "description": "Id file CAD; mặc định CAD trong view." },
             "layers": { "type": "array", "items": { "type": "string" }, "description": "Layer ký hiệu cửa." },
+            "level": { "type": "string", "description": "Tầng đặt cửa; mặc định mặt bằng đang mở." },
             "type_map": { "type": "object", "description": "Tên cửa → 'Family: Type'." },
             "default_type": { "type": "string", "description": "Type cho cửa chưa khớp tên." },
             "new_type_family": { "type": "string", "description": "Family để tạo type thiếu theo kích thước." },
@@ -174,7 +175,7 @@ public sealed class PlaceDoorsWindowsFromCad : RevitCommandBase
     {
         var doc = context.Document;
         var cad = Cad.Resolve(doc, arguments);
-        var view = Cad.ScanView(doc, cad, null);
+        var view = Cad.ScanView(doc, cad, Cad.LevelOrNull(doc, arguments, "level"));
         if (view is not ViewPlan) throw new CommandException("Cần mặt bằng chứa file CAD để đặt cửa.");
 
         var scan = Door.CadOpeningScanner.Scan(doc, cad, view);

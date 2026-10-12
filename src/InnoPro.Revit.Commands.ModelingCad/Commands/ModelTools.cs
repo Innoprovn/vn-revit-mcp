@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI.Selection;
 using InnoPro.Revit.Commands.ModelingCad.Common;
@@ -46,7 +46,7 @@ public sealed class SnapElementsToGrid : RevitCommandBase
     public override object? Execute(RevitCommandContext context, JsonElement arguments)
     {
         var doc = context.Document;
-        if (doc.ActiveView is not ViewPlan view) throw new CommandException("Cần mở một mặt bằng.");
+        if (doc.ActiveView is not ViewPlan view) throw new CommandException("Cần mở một mặt bằng (gọi open_view với level).");
         var grids = new FilteredElementCollector(doc, view.Id).OfClass(typeof(Grid)).Cast<Grid>().ToList();
         if (grids.Count == 0) throw new CommandException("Mặt bằng chưa có Grid.");
 

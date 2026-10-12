@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Autodesk.Revit.DB;
 using InnoPro.Revit.Commands.ModelingCad.Common;
 using InnoPro.Revit.Commands.ModelingCad.PlaceFloor;
@@ -38,12 +38,11 @@ public sealed class CreateFloorsFromBeams : RevitCommandBase
           "type": "object",
           "properties": {
             "level": { "type": "string", "description": "Mặc định tầng của view." },
-            "floor_type": { "type": "string" },
+            "floor_type": { "type": "string", "description": "Mặc định Floor Type đầu tiên." },
             "offset_mm": { "type": "number", "description": "Cao độ so với tầng." },
             "source": { "type": "string", "enum": ["beams", "boundary_lines"], "description": "beams: tự dò tim dầm; boundary_lines: line đã vẽ bằng floor_boundary_lines." },
             "dry_run": { "type": "boolean", "description": "Chỉ đếm ô sàn." }
-          },
-          "required": ["floor_type"]
+          }
         }
         """;
 
@@ -51,7 +50,10 @@ public sealed class CreateFloorsFromBeams : RevitCommandBase
     {
         var doc = context.Document;
         var (view, level) = FloorBeamHelper.PlanAndLevel(doc, arguments);
-        var floorType = Lookup.Type<FloorType>(doc, Args.GetString(arguments, "floor_type"));
+        var floorType = Args.GetStringOrDefault(arguments, "floor_type") is { Length: > 0 } floorName
+            ? Lookup.Type<FloorType>(doc, floorName)
+            : new FilteredElementCollector(doc).OfClass(typeof(FloorType)).OfCategory(BuiltInCategory.OST_Floors).Cast<FloorType>()
+                  .OrderBy(t => t.Name).FirstOrDefault() ?? throw new CommandException("Dự án chưa có Floor Type.");
 
         List<Curve> curves;
         if (ArgsX.Enum(arguments, "source", "beams", "beams", "boundary_lines") == "beams")

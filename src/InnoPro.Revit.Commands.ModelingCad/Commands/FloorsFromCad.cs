@@ -49,6 +49,8 @@ public sealed class CreateFloorsFromCad : RevitCommandBase
         var kind = ArgsX.Enum(arguments, "kind", "floor", "floor", "ceiling") == "ceiling" ? SurfaceKind.Ceiling : SurfaceKind.Floor;
 
         var scan = CadFloorScanner.Scan(doc, cad, view);
+        if (scan.RegionsByLayer.Count == 0)
+            throw new CommandException("CAD không có vùng hatch nào. Lệnh vẽ sàn theo hatch: hatch vùng sàn trong CAD rồi link lại, hoặc dùng create_floors_from_beams.");
         var layers = Cad.Layers(arguments, scan.RegionsByLayer.Keys);
         var regions = layers.SelectMany(l => scan.RegionsByLayer[l]).ToList();
         if (regions.Count == 0) throw new CommandException("Layer đã chọn không có vùng hatch nào.");

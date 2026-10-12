@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Autodesk.Revit.DB;
 using InnoPro.Revit.Commands.ModelingCad.Common;
 using InnoPro.Revit.Sdk;
@@ -36,7 +36,7 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
             "layers": { "type": "array", "items": { "type": "string" }, "description": "Layer đường bao cột." },
             "level": { "type": "string", "description": "Tầng chân cột; mặc định tầng của view." },
             "top_level": { "type": "string", "description": "Mặc định tầng ngay trên." },
-            "column_family": { "type": "string", "description": "Family có tham số b, h để tạo type thiếu." },
+            "column_family": { "type": "string", "description": "Family có tham số b, h để tạo type thiếu; mặc định tự chọn." },
             "type_map": { "type": "object", "description": "Kích thước \"500x300\" → type." },
             "dry_run": { "type": "boolean", "description": "Chỉ phân tích." }
           }
@@ -84,11 +84,14 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
             return new { cad_id = cad.Id.Value, columns = columns.Count, groups = Groups() };
 
         var typeErrors = new List<string>();
-        if (Args.GetStringOrDefault(arguments, "column_family") is { Length: > 0 } familyName)
+        if (groups.Any(g => !g.IsExactMatch))
         {
-            var family = ArgsX.Family(doc, familyName, BuiltInCategory.OST_StructuralColumns);
-            var created = Column.ColumnPlacer.CreateMissingTypes(doc, groups, family);
-            typeErrors.AddRange(created.Errors);
+            var family = ArgsX.FamilyWithBh(doc, arguments, "column_family", BuiltInCategory.OST_StructuralColumns);
+            if (family != null)
+                typeErrors.AddRange(Column.ColumnPlacer.CreateMissingTypes(doc, groups, family).Errors);
+            else if (groups.Any(g => g.SelectedType == null))
+                throw new CommandException("Dự án chưa có family cột kết cấu có tham số b, h để tạo type theo CAD. " +
+                                           "Load một family cột chữ nhật (ví dụ M_Concrete-Rectangular-Column) rồi chạy lại, hoặc truyền type_map.");
         }
 
         var summary = Column.ColumnPlacer.Place(doc, groups, level, top);
@@ -118,7 +121,7 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
             "cad_id": { "type": "integer", "description": "Id file CAD; mặc định CAD trong view." },
             "layers": { "type": "array", "items": { "type": "string" }, "description": "Layer nét dầm." },
             "level": { "type": "string", "description": "Mặc định tầng của view." },
-            "beam_family": { "type": "string", "description": "Family có tham số b, h để tạo type thiếu." },
+            "beam_family": { "type": "string", "description": "Family có tham số b, h để tạo type thiếu; mặc định tự chọn." },
             "type_map": { "type": "object", "description": "Tên dầm hoặc \"bxh\" → type." },
             "include_untagged": { "type": "boolean", "description": "Đặt cả dầm không đọc được tên. Mặc định false." },
             "extend_to_columns": { "type": "boolean", "description": "Kéo dầm tới cột. Mặc định true." },
@@ -186,11 +189,10 @@ public sealed class PlaceBeamsFromCad : RevitCommandBase
             return new { cad_id = cad.Id.Value, beams = beams.Count, extended_to_columns = extended, groups = Groups() };
 
         var typeErrors = new List<string>();
-        if (Args.GetStringOrDefault(arguments, "beam_family") is { Length: > 0 } familyName)
-        {
-            var family = ArgsX.Family(doc, familyName, BuiltInCategory.OST_StructuralFraming);
+        // Tự tạo type thiếu khi biết đủ b x h (đọc từ Text); family lấy theo beam_family hoặc family đầu tiên có b, h.
+        if (groups.Any(g => !g.IsExactMatch && g.ShouldModel && g.SizeHMm != null)
+            && ArgsX.FamilyWithBh(doc, arguments, "beam_family", BuiltInCategory.OST_StructuralFraming) is { } family)
             typeErrors.AddRange(Beam.BeamPlacer.CreateMissingTypes(doc, groups, family).Errors);
-        }
 
         var summary = Beam.BeamPlacer.Place(doc, groups, level, Args.GetStringOrDefault(arguments, "tag_parameter"));
         return new

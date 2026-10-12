@@ -46,7 +46,7 @@ public sealed class ListFamilyFiles : RevitCommandBase
             try
             {
                 famDoc = app.OpenDocumentFile(path);
-                var types = famDoc.FamilyManager.Types.Cast<FamilyType>().Select(t => t.Name).ToList();
+                var types = famDoc.FamilyManager.Types.Cast<FamilyType>().Select(t => t.Name.Trim()).Where(n => n.Length > 0).ToList();
                 rows.Add(new
                 {
                     file = Path.GetFileNameWithoutExtension(path),

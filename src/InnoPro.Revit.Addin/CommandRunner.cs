@@ -17,8 +17,29 @@ internal static class CommandRunner
     /// <summary>Đường AI: serialize kết quả ngay trên luồng Revit (lệnh được phép trả LINQ lười).</summary>
     public static string RunForBridge(UIApplication app, LoadedCommand loaded, JsonElement? arguments, CancellationToken token)
     {
+        var args = arguments ?? EmptyArgs;
+        RejectUnknownArguments(loaded.Command, args);
         var context = new RevitCommandContext(app, token, new CommandUi(app), isInteractive: false);
-        return JsonSerializer.Serialize(Execute(context, loaded.Command, arguments ?? EmptyArgs), BridgeProtocol.Json);
+        return JsonSerializer.Serialize(Execute(context, loaded.Command, args), BridgeProtocol.Json);
+    }
+
+    /// <summary>
+    /// AI truyền tham số không có trong schema (ví dụ dry_run cho lệnh không hỗ trợ) thì báo lỗi thay vì lặng lẽ bỏ qua:
+    /// tránh trường hợp AI tưởng chỉ chạy thử nhưng lệnh đã sửa mô hình thật.
+    /// </summary>
+    private static void RejectUnknownArguments(IRevitCommand command, JsonElement args)
+    {
+        if (args.ValueKind != JsonValueKind.Object) return;
+        using var schema = JsonDocument.Parse(command.InputSchema);
+        var root = schema.RootElement;
+        if (root.TryGetProperty("additionalProperties", out var extra) && extra.ValueKind != JsonValueKind.False) return;
+        var known = root.TryGetProperty("properties", out var props) && props.ValueKind == JsonValueKind.Object
+            ? props.EnumerateObject().Select(p => p.Name).ToHashSet(StringComparer.Ordinal)
+            : [];
+        var unknown = args.EnumerateObject().Select(p => p.Name).Where(n => !known.Contains(n)).ToList();
+        if (unknown.Count == 0) return;
+        throw new CommandException($"Lệnh {command.Name} không có tham số: {string.Join(", ", unknown)}. " +
+                                   (known.Count == 0 ? "Lệnh không nhận tham số." : $"Tham số hợp lệ: {string.Join(", ", known)}."));
     }
 
     public static object? Execute(RevitCommandContext context, IRevitCommand command, JsonElement args)

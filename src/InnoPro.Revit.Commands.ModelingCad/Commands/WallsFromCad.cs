@@ -29,6 +29,7 @@ public sealed class CreateWallsFromCad : RevitCommandBase
             "min_thickness_mm": { "type": "number", "description": "Mặc định 80." },
             "max_thickness_mm": { "type": "number", "description": "Mặc định 300." },
             "wall_types": { "type": "object", "description": "Bề dày → Wall Type, ví dụ {\"200\": \"Tường 200\"}." },
+            "create_missing_types": { "type": "boolean", "description": "Tự tạo type cho bề dày chưa có, mặc định true." },
             "location_line": { "type": "string", "enum": ["wall_centerline", "core_centerline", "finish_exterior", "finish_interior", "core_exterior", "core_interior"] },
             "dimension_type": { "type": "string", "description": "Tạo Dimension tới Grid gần nhất." },
             "dry_run": { "type": "boolean", "description": "Chỉ phân tích, không vẽ." }
@@ -82,15 +83,21 @@ public sealed class CreateWallsFromCad : RevitCommandBase
             })
             .ToList();
 
+        var dryRun = Args.GetBoolOrDefault(arguments, "dry_run", false);
+        var autoTypes = Args.GetBoolOrDefault(arguments, "create_missing_types", true) && wallTypes.Count > 0;
+        if (autoTypes && !dryRun)
+            foreach (var bucket in buckets.Where(b => b.SelectedWallType == null))
+                bucket.SelectedWallType = CreateWallType(doc, wallTypes, bucket.ThicknessMm);
+
         var summary = Table.Of(buckets.Select(b => new
         {
             thickness_mm = b.ThicknessMm,
             segments = b.Candidates.Count,
             length_m = Math.Round(UnitConvert.FeetToMm(b.Candidates.Sum(c => c.LengthFeet)) / 1000, 2),
-            wall_type = b.SelectedWallType?.Name,
+            wall_type = b.SelectedWallType?.Name ?? (autoTypes ? NewTypeName(b.ThicknessMm) + " (tạo mới)" : null),
         }));
 
-        if (Args.GetBoolOrDefault(arguments, "dry_run", false))
+        if (dryRun)
         {
             return new
             {
@@ -138,6 +145,25 @@ public sealed class CreateWallsFromCad : RevitCommandBase
             groups = summary,
             errors = report.Errors,
         };
+    }
+
+    private static string NewTypeName(int mm) => $"InnoPro {mm}mm";
+
+    /// <summary>Nhân bản một Basic Wall thành type một lớp kết cấu dày <paramref name="mm"/>, giữ vật liệu lớp lõi.</summary>
+    private static WallType CreateWallType(Document doc, List<WallType> basics, int mm)
+    {
+        var name = NewTypeName(mm);
+        if (basics.FirstOrDefault(t => t.Name == name) is { } existing) return existing;
+        var source = basics.FirstOrDefault(t => t.GetCompoundStructure()?.LayerCount == 1) ?? basics[0];
+        var created = (WallType)source.Duplicate(name);
+        var structure = created.GetCompoundStructure();
+        var material = structure == null || structure.LayerCount == 0
+            ? ElementId.InvalidElementId
+            : structure.GetMaterialId(Math.Max(0, structure.GetFirstCoreLayerIndex()));
+        created.SetCompoundStructure(CompoundStructure.CreateSingleLayerCompoundStructure(
+            MaterialFunctionAssignment.Structure, UnitConvert.MmToFeet(mm), material));
+        basics.Add(created);
+        return created;
     }
 
     private static int RoundedWidthMm(WallType type) =>

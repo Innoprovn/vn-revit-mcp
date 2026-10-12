@@ -21,8 +21,8 @@ namespace InnoPro.Revit.Commands.ModelingCad.LinkToDirectShape;
 /// </summary>
 public sealed class MetadataCopier
 {
-    private const string DefinitionGroupName = "BIMTech LinkToDirectShape";
-    private const string SharedParameterFileName = "BIMTech_LinkToDirectShape_SharedParams.txt";
+    private const string DefinitionGroupName = "InnoPro LinkToDirectShape";
+    private const string SharedParameterFileName = "InnoPro_LinkToDirectShape_SharedParams.txt";
 
     private static readonly string SharedParameterHeader =
         "# This is a Revit shared parameter file.\n" +
@@ -247,7 +247,7 @@ public sealed class MetadataCopier
     private static Guid DeterministicGuid(string name)
     {
         var bytes = System.Security.Cryptography.MD5.HashData(
-            Encoding.UTF8.GetBytes("BIMTech.LinkToDirectShape|" + name));
+            Encoding.UTF8.GetBytes("InnoPro.LinkToDirectShape|" + name));
         return new Guid(bytes);
     }
 

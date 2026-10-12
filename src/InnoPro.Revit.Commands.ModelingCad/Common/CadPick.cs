@@ -117,5 +117,18 @@ internal static class ArgsX
                ?? throw new CommandException($"Không có family '{name}'. Family có sẵn: {Cad.Suggest(families.Select(f => f.Name))}.");
     }
 
+    /// <summary>
+    /// Family theo tên (tham số <paramref name="argName"/>), không có thì tự chọn family đầu tiên có type mang
+    /// tham số b và h (Length) để nhân bản type theo kích thước CAD. Null nếu dự án không có family nào như vậy.
+    /// </summary>
+    public static Family? FamilyWithBh(Document doc, JsonElement args, string argName, BuiltInCategory category)
+    {
+        if (Args.GetStringOrDefault(args, argName) is { Length: > 0 } name) return Family(doc, name, category);
+        static bool IsLength(Parameter? p) => p is { StorageType: StorageType.Double } && p.Definition.GetDataType() == SpecTypeId.Length;
+        return new FilteredElementCollector(doc).OfCategory(category).OfClass(typeof(FamilySymbol)).Cast<FamilySymbol>()
+            .Where(s => IsLength(s.LookupParameter("b")) && IsLength(s.LookupParameter("h")))
+            .Select(s => s.Family).OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase).FirstOrDefault();
+    }
+
     public static List<long> Ids(IEnumerable<ElementId> ids) => ids.Select(i => i.Value).ToList();
 }

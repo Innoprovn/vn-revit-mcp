@@ -138,7 +138,7 @@ public sealed class ShapeConverter
 
         try
         {
-            directShape.ApplicationId = "BIMTech.LinkToDirectShape";
+            directShape.ApplicationId = "InnoPro.LinkToDirectShape";
             directShape.ApplicationDataId = element.UniqueId;
             directShape.Name = Describe(element);
         }
