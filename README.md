@@ -51,6 +51,12 @@ Chi tiết: [docs/kien-truc.md](docs/kien-truc.md).
 | `select_elements` | Chọn và zoom tới phần tử theo id |
 | `set_parameters` | Sửa một tham số trên nhiều phần tử (Undo được) |
 
+**CommandSet Code**
+
+| Tool | Việc làm |
+|---|---|
+| `run_csharp` | Chạy mã C# Revit API. Mặc định **chỉ đọc** (mọi thay đổi bị hủy); chế độ `write` bật hộp thoại để người dùng duyệt trong Revit. Không cần thì xóa thư mục `Commands\Code` để tắt hẳn. |
+
 ## Cài đặt cho nhà phát triển
 
 Cần: Windows, Revit 2025 trở lên, [.NET SDK 8](https://dotnet.microsoft.com/download).

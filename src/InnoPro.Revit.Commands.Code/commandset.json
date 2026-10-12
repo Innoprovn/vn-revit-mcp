@@ -1,0 +1,6 @@
+{
+  "name": "Code",
+  "description": "Chạy mã C# có kiểm soát: mặc định chỉ đọc, sửa mô hình phải được người dùng duyệt trong Revit.",
+  "author": "InnoPro",
+  "assemblies": [ "InnoPro.Revit.Commands.Code.dll" ]
+}

@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoPro.Revit.Sdk", "src\In
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoPro.Revit.Commands.Core", "src\InnoPro.Revit.Commands.Core\InnoPro.Revit.Commands.Core.csproj", "{22FE6281-C434-4487-8892-156335E9F4F2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoPro.Revit.Commands.Code", "src\InnoPro.Revit.Commands.Code\InnoPro.Revit.Commands.Code.csproj", "{6A5F4EA9-FA33-449E-A500-599679739C86}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -85,6 +87,18 @@ Global
 		{22FE6281-C434-4487-8892-156335E9F4F2}.Release|x64.Build.0 = Release|Any CPU
 		{22FE6281-C434-4487-8892-156335E9F4F2}.Release|x86.ActiveCfg = Release|Any CPU
 		{22FE6281-C434-4487-8892-156335E9F4F2}.Release|x86.Build.0 = Release|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Debug|x64.Build.0 = Debug|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Debug|x86.Build.0 = Debug|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Release|x64.ActiveCfg = Release|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Release|x64.Build.0 = Release|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Release|x86.ActiveCfg = Release|Any CPU
+		{6A5F4EA9-FA33-449E-A500-599679739C86}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -95,5 +109,6 @@ Global
 		{6320C5BA-8A96-43C7-B4C7-2A219B8485A0} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{71565BF3-2FD1-42B4-9C00-B4A89DB7302E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{22FE6281-C434-4487-8892-156335E9F4F2} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{6A5F4EA9-FA33-449E-A500-599679739C86} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal
