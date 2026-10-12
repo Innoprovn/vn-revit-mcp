@@ -31,12 +31,19 @@ internal static class RibbonManager
         var assembly = typeof(RibbonManager).Assembly.Location;
         panel.AddItem(Button("InnoPro.Mcp.Chat", "Chat\nAI", assembly, typeof(ShowChatCommand).FullName!, "✦",
             "Mở khung chat AI ngay trong Revit: Claude, OpenAI, Gemini, hoặc AI chạy trên máy (Ollama, LM Studio)."));
-        panel.AddItem(Button("InnoPro.Mcp.Toggle", "MCP\nBật/Tắt", assembly, typeof(ToggleBridgeCommand).FullName!, "AI",
-            "Bật hoặc tắt kết nối cho AI (MCP). Khi tắt, không AI nào điều khiển được Revit."));
         panel.AddItem(Button("InnoPro.Mcp.Commands", "Lệnh\nAI", assembly, typeof(ShowCommandsCommand).FullName!, "≡",
             "Trạng thái kết nối, danh sách lệnh và lỗi nạp lệnh (nếu có)."));
-        panel.AddItem(Button("InnoPro.Mcp.Reload", "Nạp lại\nlệnh", assembly, typeof(ReloadCommandsCommand).FullName!, "↻",
-            "Nạp lại lệnh từ đĩa (CommandSet và file .cs trong thư mục Scripts) mà không cần khởi động lại Revit."));
+        // Nút bảo trì: nhỏ, xếp chồng cho gọn.
+        panel.AddStackedItems(
+            Button("InnoPro.Mcp.Toggle", "Bật/Tắt MCP", assembly, typeof(ToggleBridgeCommand).FullName!, "AI",
+                "Bật hoặc tắt kết nối cho AI (MCP). Khi tắt, không AI nào điều khiển được Revit."),
+            Button("InnoPro.Mcp.Reload", "Nạp lại lệnh", assembly, typeof(ReloadCommandsCommand).FullName!, "↻",
+                "Nạp lại lệnh từ đĩa (CommandSet và file .cs trong thư mục Scripts) mà không cần khởi động lại Revit."));
+        panel.AddStackedItems(
+            Button("InnoPro.Mcp.Connect", "Kết nối AI", assembly, typeof(ConnectAiCommand).FullName!, "⇄",
+                "Xem AI nào trên máy (Claude, Cursor, VS Code...) đã kết nối với Revit, và kết nối bằng một nút."),
+            Button("InnoPro.Mcp.Update", "Cập nhật", assembly, typeof(UpdateCommand).FullName!, "⇩",
+                "Kiểm tra bản mới trên GitHub và cài đặt."));
 
         Sync(registry, name => app.GetRibbonPanels(TabName).FirstOrDefault(p => p.Name == name) ?? app.CreateRibbonPanel(TabName, name));
     }
