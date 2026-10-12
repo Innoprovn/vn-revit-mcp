@@ -16,6 +16,8 @@
 
   <PropertyGroup>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Thư viện mặc định không chép DLL của gói NuGet; add-in cần Roslyn đi kèm. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
