@@ -2,6 +2,7 @@ using System.Text.Json;
 using Autodesk.Revit.UI;
 using InnoPro.Bridge;
 using InnoPro.Revit.Sdk;
+using InnoPro.Ui;
 
 namespace InnoPro.Revit.Addin;
 
@@ -22,7 +23,7 @@ internal static class ButtonRunner
         var app = App.Instance;
         if (app == null || !app.Registry.TryGet(name, out var loaded))
         {
-            TaskDialog.Show("InnoPro", $"Lệnh '{name}' không còn. Bấm 'Nạp lại lệnh' để cập nhật.");
+            InnoWindow.Message("InnoPro", $"Lệnh {name} không còn. Bấm Nạp lại lệnh để cập nhật.", data.Application.MainWindowHandle);
             return Result.Cancelled;
         }
 
@@ -41,7 +42,7 @@ internal static class ButtonRunner
 
             Log.Info($"Nút: chạy lệnh {name}");
             var result = CommandRunner.Execute(context, command, args);
-            ResultWindow.Show(uiApp, name, JsonSerializer.SerializeToElement(result, BridgeProtocol.Json));
+            ResultWindow.Show(uiApp, Labels.CommandTitle(command), JsonSerializer.SerializeToElement(result, BridgeProtocol.Json));
             return Result.Succeeded;
         }
         catch (OperationCanceledException)
@@ -50,13 +51,13 @@ internal static class ButtonRunner
         }
         catch (CommandException ex)
         {
-            TaskDialog.Show($"InnoPro: {name}", ex.Message);
+            InnoWindow.Message(Labels.CommandTitle(command), ex.Message, uiApp.MainWindowHandle);
             return Result.Cancelled;
         }
         catch (Exception ex)
         {
             Log.Error($"Nút {name} lỗi", ex);
-            TaskDialog.Show($"InnoPro: {name}", $"Lỗi: {ex.Message}\n\nChi tiết trong log: {Paths.LogDir}");
+            InnoWindow.Message(Labels.CommandTitle(command), $"Lỗi: {ex.Message}\n\nLog: {Paths.LogDir}", uiApp.MainWindowHandle);
             return Result.Cancelled;
         }
     }

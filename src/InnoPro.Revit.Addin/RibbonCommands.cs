@@ -3,6 +3,7 @@ using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using InnoPro.Bridge;
+using InnoPro.Ui;
 
 namespace InnoPro.Revit.Addin;
 
@@ -17,9 +18,8 @@ public sealed class ToggleBridgeCommand : IExternalCommand
         if (bridge.IsRunning) bridge.Stop();
         else bridge.Start();
 
-        TaskDialog.Show("InnoPro MCP", bridge.IsRunning
-            ? "Đã BẬT kết nối AI. Các ứng dụng AI trên máy này (cùng tài khoản Windows) có thể điều khiển Revit."
-            : "Đã TẮT kết nối AI.");
+        InnoWindow.Message("Kết nối MCP", bridge.IsRunning ? "Đã bật. AI trên máy này điều khiển được Revit." : "Đã tắt.",
+            commandData.Application.MainWindowHandle);
         return Result.Succeeded;
     }
 }
@@ -33,13 +33,8 @@ public sealed class ReloadCommandsCommand : IExternalCommand
         if (app == null) return Result.Failed;
 
         var result = app.ReloadCommands();
-        var dialog = new TaskDialog("InnoPro MCP")
-        {
-            MainInstruction = $"Đã nạp lại: {result.CommandCount} lệnh" + (result.Errors.Count > 0 ? $", {result.Errors.Count} lỗi" : ""),
-            MainContent = $"Thả file lệnh .cs vào:\n{Paths.UserScriptsDir}",
-            ExpandedContent = Errors(result.Errors),
-        };
-        dialog.Show();
+        var text = $"{result.CommandCount} lệnh" + (result.Errors.Count > 0 ? $", {result.Errors.Count} lỗi:\n\n" + Errors(result.Errors) : ".");
+        InnoWindow.Message("Nạp lại lệnh", text, commandData.Application.MainWindowHandle);
         return Result.Succeeded;
     }
 
@@ -56,24 +51,17 @@ public sealed class ShowCommandsCommand : IExternalCommand
         if (app == null) return Result.Failed;
 
         var text = new StringBuilder();
+        text.AppendLine($"vn-revit-mcp {App.Version} · MCP {(app.Bridge.IsRunning ? "bật" : "tắt")} · {app.Registry.Commands.Count} lệnh");
         foreach (var group in app.Registry.Commands.GroupBy(c => c.Command.Category).OrderBy(g => g.Key))
         {
-            text.AppendLine($"[{group.Key}]");
+            text.AppendLine().AppendLine(group.Key);
             foreach (var c in group.OrderBy(c => c.Command.Name))
-                text.AppendLine($"  • {c.Command.Name}  ({c.CommandSet})");
+                text.AppendLine($"   {Labels.CommandTitle(c.Command)}  ·  {c.Command.Name}");
         }
         if (app.Registry.Errors.Count > 0)
-            text.AppendLine().AppendLine("[Lỗi nạp lệnh]").AppendLine(ReloadCommandsCommand.Errors(app.Registry.Errors));
+            text.AppendLine().AppendLine("Lỗi nạp lệnh").AppendLine(ReloadCommandsCommand.Errors(app.Registry.Errors));
 
-        var dialog = new TaskDialog("InnoPro MCP")
-        {
-            MainInstruction = $"vn-revit-mcp {App.Version}: {(app.Bridge.IsRunning ? "đang BẬT" : "đang TẮT")}",
-            MainContent = $"{app.Registry.Commands.Count} lệnh" +
-                          (app.Registry.Errors.Count > 0 ? $", {app.Registry.Errors.Count} lỗi nạp" : "") +
-                          $"\nThư mục lệnh .cs: {Paths.UserScriptsDir}",
-            ExpandedContent = text.ToString(),
-        };
-        dialog.Show();
+        InnoWindow.Message("Lệnh", text.ToString(), commandData.Application.MainWindowHandle);
         return Result.Succeeded;
     }
 }

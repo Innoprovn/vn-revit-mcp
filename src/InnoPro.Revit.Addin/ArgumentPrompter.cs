@@ -2,9 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
 using Autodesk.Revit.DB;
 using InnoPro.Revit.Sdk;
+using InnoPro.Ui;
 
 namespace InnoPro.Revit.Addin;
 
@@ -101,45 +101,27 @@ internal static class ArgumentPrompter
 
     private static bool ShowForm(RevitCommandContext context, IRevitCommand command, List<Field> fields, JsonObject values)
     {
-        var window = new Window
-        {
-            Title = $"InnoPro: {command.Name}",
-            Width = 460,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false,
-        };
-        new WindowInteropHelper(window) { Owner = context.UIApplication.MainWindowHandle };
-
-        var root = new StackPanel { Margin = new Thickness(14) };
-        root.Children.Add(new TextBlock
-        {
-            Text = command.Description,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 0, 12),
-            Foreground = System.Windows.Media.Brushes.DimGray,
-        });
+        var window = new InnoWindow(Labels.CommandTitle(command), context.UIApplication.MainWindowHandle, width: 400);
+        var root = new StackPanel { Margin = new Thickness(16, 12, 16, 0) };
+        var summary = Labels.Short(command.Description, 110);
+        if (summary.Length > 0) root.Children.Add(new TextBlock { Text = summary, Foreground = Theme.Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
 
         var editors = new Dictionary<Field, Func<string>>();
         foreach (var field in fields)
         {
-            var label = new TextBlock
+            root.Children.Add(new TextBlock
             {
-                Text = field.Name + (field.Required ? " *" : ""),
-                FontWeight = FontWeights.SemiBold,
-                ToolTip = field.Description,
-            };
-            root.Children.Add(label);
-            if (!string.IsNullOrWhiteSpace(field.Description))
-                root.Children.Add(new TextBlock { Text = field.Description, TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = System.Windows.Media.Brushes.Gray });
+                Text = Labels.Field(field.Name, field.Description) + (field.Required ? " *" : ""),
+                ToolTip = string.IsNullOrWhiteSpace(field.Description) ? null : field.Description,
+                Margin = new Thickness(0, 0, 0, 3),
+            });
 
             FrameworkElement editor;
             if (field.Type == "boolean")
             {
-                var check = new CheckBox { Content = "Có" };
+                var check = new CheckBox { Content = "Có", IsChecked = Labels.Default(field.Description) is "true" or "có" };
                 editor = check;
-                editors[field] = () => check.IsChecked == true ? "true" : "";
+                editors[field] = () => check.IsChecked == true ? "true" : "false";
             }
             else if (field.Options is { Count: > 0 } options)
             {
@@ -150,55 +132,51 @@ internal static class ArgumentPrompter
             else
             {
                 var text = new TextBox();
-                editor = text;
+                editor = Labels.WithPlaceholder(text, Labels.Default(field.Description));
                 editors[field] = () => text.Text;
             }
-            editor.Margin = new Thickness(0, 3, 0, 10);
+            editor.Margin = new Thickness(0, 0, 0, 10);
             root.Children.Add(editor);
         }
 
-        var error = new TextBlock { Foreground = System.Windows.Media.Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+        var error = new TextBlock { Foreground = Theme.Danger, TextWrapping = TextWrapping.Wrap };
         root.Children.Add(error);
+        window.Body = new ScrollViewer { Content = root, MaxHeight = 640, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
 
-        var ok = new Button { Content = "Chạy", Width = 90, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
-        var cancel = new Button { Content = "Hủy", Width = 90, IsCancel = true };
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        buttons.Children.Add(ok);
-        buttons.Children.Add(cancel);
-        root.Children.Add(buttons);
-        window.Content = new ScrollViewer { Content = root, MaxHeight = 700, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-
-        ok.Click += (_, _) =>
+        var accepted = false;
+        window.AddButton("Hủy", closes: true);
+        window.AddButton("Chạy", primary: true, onClick: () =>
         {
             try
             {
                 foreach (var (field, read) in editors)
                 {
                     var raw = read().Trim();
-                    if (raw.Length == 0)
+                    if (raw.Length == 0 || (field.Type == "boolean" && raw == "false" && !field.Required))
                     {
-                        if (field.Required && field.Type != "boolean") throw new FormatException($"Cần nhập '{field.Name}'.");
-                        continue;
+                        if (field.Required && field.Type != "boolean") throw new FormatException($"Cần nhập: {Labels.Field(field.Name, field.Description)}.");
+                        if (raw.Length == 0) continue;
                     }
                     values[field.Name] = Convert(field, raw);
                 }
-                window.DialogResult = true;
+                accepted = true;
+                window.Close();
             }
             catch (FormatException ex)
             {
                 error.Text = ex.Message;
             }
-        };
+        });
 
-        return window.ShowDialog() == true;
+        window.ShowDialog();
+        return accepted;
     }
-
     private static JsonNode Convert(Field field, string raw) => field.Type switch
     {
         "boolean" => JsonValue.Create(raw == "true"),
-        "integer" => long.TryParse(raw, out var n) ? JsonValue.Create(n) : throw new FormatException($"'{field.Name}' phải là số nguyên."),
+        "integer" => long.TryParse(raw, out var n) ? JsonValue.Create(n) : throw new FormatException($"{Labels.Field(field.Name, field.Description)}: phải là số nguyên."),
         "number" => double.TryParse(raw.Replace(',', '.'), System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var d) ? JsonValue.Create(d) : throw new FormatException($"'{field.Name}' phải là số."),
+            System.Globalization.CultureInfo.InvariantCulture, out var d) ? JsonValue.Create(d) : throw new FormatException($"{Labels.Field(field.Name, field.Description)}: phải là số."),
         "array" => new JsonArray(raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(s => (JsonNode)JsonValue.Create(s)!).ToArray()),
         _ => JsonValue.Create(raw)!,

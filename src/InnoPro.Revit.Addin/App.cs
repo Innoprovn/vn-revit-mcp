@@ -44,8 +44,8 @@ public sealed class App : IExternalApplication
             _revitVersion = $"{application.ControlledApplication.VersionName} ({application.ControlledApplication.VersionBuild})";
             Log.Info($"Khởi động vn-revit-mcp {Version} trên {_revitVersion}");
 
-            // CommandSet đã build nạp ngay (nhanh). File .cs cần biên dịch thì nạp nền để không làm chậm Revit khởi động.
-            _registry = CommandRegistry.Load(Paths.CommandSetRoots, []);
+            // File .cs được biên dịch có đệm theo nội dung nên lần mở sau gần như tức thì.
+            _registry = CommandRegistry.Load(Paths.CommandSetRoots, Paths.ScriptRoots);
             WriteManifest();
 
             _dispatcher = new RevitDispatcher();
@@ -64,8 +64,6 @@ public sealed class App : IExternalApplication
             application.ControlledApplication.DocumentCreated += (_, _) => Interlocked.Increment(ref _openDocuments);
             application.ControlledApplication.DocumentClosed += (_, _) => Interlocked.Decrement(ref _openDocuments);
 
-            if (CommandRegistry.HasScripts(Paths.ScriptRoots))
-                Task.Run(ReloadCommands);
             return Result.Succeeded;
         }
         catch (Exception ex)

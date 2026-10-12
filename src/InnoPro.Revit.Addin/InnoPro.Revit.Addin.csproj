@@ -26,6 +26,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Giao diện tự vẽ dùng chung với module chat. -->
+    <Compile Include="..\Shared\Ui\*.cs" Link="Ui\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Project WPF bỏ System.IO khỏi implicit usings vì trùng tên System.Windows.Shapes.Path. -->
     <Using Include="System.IO" />
   </ItemGroup>

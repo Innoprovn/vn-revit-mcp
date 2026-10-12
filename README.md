@@ -3,7 +3,7 @@
 **Cho AI làm việc với Autodesk Revit.** Mã nguồn mở, miễn phí, do [InnoPro](https://innopro.vn) phát triển.
 
 - **Một lệnh cài**, tự kết nối mọi AI trên máy: Claude, Cursor, VS Code Copilot, Gemini CLI, Codex, LM Studio...
-- **Chat ngay trong Revit** với Claude, OpenAI, Gemini, OpenRouter, hoặc AI chạy hoàn toàn trên máy (Ollama, LM Studio).
+- **Chat ngay trong Revit** với Claude, OpenAI, Gemini, DeepSeek, Qwen, Kimi, GLM..., hoặc AI chạy trên máy; dùng được cả gói Claude Pro/Max.
 - **Mỗi lệnh dùng được hai cách:** người bấm nút trên tab **InnoPro** (form nhập tự sinh), hoặc AI gọi.
 - **Viết lệnh mới bằng một file `.cs`**, không cần build: thả vào thư mục, bấm *Nạp lại lệnh*. Hoặc nhờ AI viết.
 - **Tiết kiệm token:** AI chỉ thấy vài lệnh hay dùng, tra thêm khi cần; kết quả trả dạng bảng gọn.
@@ -20,39 +20,40 @@ irm https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/install.ps1 | 
 Hoặc tải `vn-revit-mcp-<phiên bản>-win-x64.zip` ở [Releases](https://github.com/Innoprovn/vn-revit-mcp/releases),
 giải nén rồi bấm đúp **`Cai-dat.cmd`**.
 
-Xong: mở Revit, tab **InnoPro**. Dùng theo một trong hai cách:
-- **Chat trong Revit:** bấm **Chat AI**, chọn nhà cung cấp, nhập API key (hoặc chọn Ollama/LM Studio, không cần key).
-- **AI bên ngoài** (Claude Desktop, Cursor...): khởi động lại ứng dụng AI rồi hỏi *"Mô hình Revit đang mở có bao nhiêu cột?"*
+Xong: mở Revit, tab **InnoPro**. Dùng theo một trong ba cách:
+- **Chat trong Revit:** bấm **Chat AI**, chọn nhà cung cấp, nhập API key. Có Claude, OpenAI, Gemini, DeepSeek, Qwen, Kimi,
+  GLM, MiniMax, OpenRouter, hoặc AI chạy trên máy (Ollama, LM Studio) không cần key.
+- **Gói Claude Pro/Max:** trong khung chat chọn *Claude (gói Pro/Max)* → *Kết nối và mở Claude*.
+- **AI bên ngoài** (Claude Desktop, Cursor, VS Code...): đã tự kết nối khi cài; khởi động lại ứng dụng AI rồi hỏi.
 
-| Việc | Lệnh |
+Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md).
+
+| Việc | Cách làm |
 |---|---|
-Hướng dẫn chi tiết cho người dùng: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md).
-
-| Xem AI client nào đã kết nối (hoặc bấm nút **Kết nối AI** trong Revit) | `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" clients` |
-| Kết nối lại (sau khi cài thêm AI client) | `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" setup` |
-| Cập nhật lên bản mới | chạy lại lệnh cài một dòng |
+| Kết nối thêm AI client | nút **Hệ thống → Kết nối AI** trong Revit |
+| Cập nhật | nút **Hệ thống → Cập nhật**, hoặc chạy lại lệnh cài |
 | Gỡ cài đặt | `uninstall.ps1` trong file zip (thêm `-Purge` để xóa cả lệnh tự thêm) |
 
 AI client khác: khai báo MCP server kiểu **stdio**, command `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe`.
 Mở nhiều Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
 
-## Có những gì
+## Có những gì (82 lệnh)
 
-| Nhóm | Lệnh | Nút trên ribbon |
-|---|---|---|
-| Truy vấn | thông tin dự án/view, phần tử đang chọn, tham số, tầng, view, sheet, tìm phần tử, thống kê mô hình | Thống kê mô hình, Tham số phần tử |
-| Tham số | sửa một tham số trên nhiều phần tử | Sửa tham số |
-| QA-QC | cảnh báo Revit, phần tử trùng, tham số còn trống, va chạm giữa hai category | Cảnh báo, Phần tử trùng, Tham số trống, Va chạm |
-| Dựng hình | tạo tầng, lưới trục, tường, dầm, sàn, đặt cột/móng/family; liệt kê type | |
-| Dữ liệu | đọc schedule, xuất CSV, khối lượng vật liệu | Đọc/xuất schedule, Khối lượng vật liệu |
-| Nâng cao | `run_csharp`: AI chạy mã C#; mặc định chỉ đọc, muốn sửa mô hình phải được duyệt trong Revit | |
+| Nhóm | Ví dụ |
+|---|---|
+| Truy vấn, Tham số | thông tin dự án/view, phần tử đang chọn, tìm phần tử, tham số, thống kê; sửa tham số hàng loạt |
+| QA-QC | cảnh báo, phần tử trùng (tìm/xóa), tham số trống, va chạm, va chạm với link, sức khỏe mô hình, dim tới trục |
+| Dựng hình | tầng, lưới trục, tường, dầm, sàn, đặt family; sàn theo dầm, gộp/tách sàn, tự join, lớp hoàn thiện tường |
+| Dựng hình CAD | tường, sàn/trần, cột, dầm, cọc + đài, cửa từ bản vẽ CAD; tạo type dầm từ mặt cắt |
+| Rebar | thống kê kiểu BBS, chọn nhanh, ngắt/gắn host, dịch thép, tránh va chạm, QA thép, so sánh thay đổi, thư viện hình dạng |
+| Bản vẽ | tạo sheet, đặt view, nhân bản view, gán template, tag tự động, dim trục, xuất PDF |
+| Dữ liệu | đọc/xuất schedule, khối lượng vật liệu, chiều dài tường, danh sách sheet, tìm phần tử trong link |
+| Nâng cao | `run_csharp`: AI chạy mã C#; mặc định chỉ đọc, sửa mô hình phải được duyệt |
 
-Mọi lệnh khác (không có nút lớn) nằm trong menu **Lệnh khác** của từng nhóm.
+Ribbon gọn: vài nút nhỏ mỗi nhóm, mọi lệnh khác trong menu **Tất cả**. Thêm lệnh từ **Cửa hàng** (cộng đồng đóng góp).
 
-**Công thức** (chọn trong AI client hỗ trợ MCP prompts, ví dụ gõ `/` trong Claude): `kiem-tra-chat-luong`,
-`boc-khoi-luong`, `dung-tang-luoi-truc`, `viet-lenh-moi`. Mỗi công thức là một file Markdown, ai cũng viết thêm được
-(thả vào `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\Recipes\`).
-
+**Công thức** (MCP prompts, ví dụ gõ `/` trong Claude): `kiem-tra-chat-luong`, `boc-khoi-luong`, `dung-tang-luoi-truc`,
+`viet-lenh-moi`. Mỗi công thức là một file Markdown, ai cũng viết thêm được.
 ## Viết lệnh mới
 
 Cách nhanh nhất: một file `.cs`, không cần project hay build.

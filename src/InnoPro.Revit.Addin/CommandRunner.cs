@@ -27,7 +27,8 @@ internal static class CommandRunner
             return command.Execute(context, args);
 
         using var transaction = new Transaction(context.Document, $"InnoPro: {command.Name}");
-        TransactionHelper.SuppressWarnings(transaction);
+        // Phần tử do lệnh tạo ra có id lớn hơn mốc này: chỉ những phần tử đó mới được tự xóa khi gây lỗi.
+        TransactionHelper.SuppressWarnings(transaction, TransactionHelper.MaxElementId(context.Document));
         transaction.Start();
         try
         {

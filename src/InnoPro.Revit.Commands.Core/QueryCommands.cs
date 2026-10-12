@@ -89,7 +89,7 @@ public sealed class GetElementParameters : RevitCommandBase
           "required": ["element_id"]
         }
         """;
-    public override RibbonButton? Ribbon => new("Tham số\nphần tử", "≣");
+    public override RibbonButton? Ribbon => new("Tham số", "≣");
 
     public override object? Execute(RevitCommandContext context, JsonElement arguments)
     {
@@ -139,7 +139,7 @@ public sealed class AnalyzeModelStatistics : RevitCommandBase
     public override string InputSchema => """
         {"type":"object","properties":{"top":{"type":"integer","description":"Số category nhiều nhất cần liệt kê, mặc định 30."}}}
         """;
-    public override RibbonButton? Ribbon => new("Thống kê\nmô hình", "Σ");
+    public override RibbonButton? Ribbon => new("Thống kê", "Σ");
 
     public override object? Execute(RevitCommandContext context, JsonElement arguments)
     {

@@ -5,6 +5,7 @@ using System.Text.Json;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using InnoPro.Ui;
 
 namespace InnoPro.Revit.Addin;
 
@@ -17,24 +18,17 @@ public sealed class ConnectAiCommand : IExternalCommand
         var exe = Path.GetFullPath(Path.Combine(Paths.AddinDir, "..", "server", "vn-revit-mcp.exe"));
         if (!File.Exists(exe))
         {
-            TaskDialog.Show("InnoPro: Kết nối AI", $"Không thấy MCP server tại:\n{exe}\n\nHãy cài lại vn-revit-mcp.");
+            InnoWindow.Message("Kết nối AI", $"Không thấy MCP server:\n{exe}\nHãy cài lại vn-revit-mcp.", commandData.Application.MainWindowHandle);
             return Result.Cancelled;
         }
 
+        var owner = commandData.Application.MainWindowHandle;
         var clients = Run(exe, "clients --json");
-        var dialog = new TaskDialog("InnoPro: Kết nối AI")
-        {
-            MainInstruction = "AI trên máy này",
-            MainContent = Describe(clients) +
-                          "\nAI khác (hỗ trợ MCP): khai báo server kiểu stdio với lệnh:\n" + exe,
-            CommonButtons = TaskDialogCommonButtons.Close,
-        };
-        dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Kết nối tất cả AI đã cài",
-            "Tự thêm vn-revit-mcp vào cấu hình của từng AI (có sao lưu file cấu hình cũ).");
-        if (dialog.Show() != TaskDialogResult.CommandLink1) return Result.Succeeded;
+        var text = Describe(clients) + "\nAI khác: khai báo MCP kiểu stdio, lệnh\n" + exe;
+        if (InnoWindow.Choose("Kết nối AI", text, owner, "Kết nối tất cả", "Đóng") != 0) return Result.Succeeded;
 
         var result = Run(exe, "setup --json");
-        TaskDialog.Show("InnoPro: Kết nối AI", Describe(result) + "\nKhởi động lại các AI vừa kết nối để chúng nhận Revit.");
+        InnoWindow.Message("Kết nối AI", Describe(result) + "\nKhởi động lại các AI vừa kết nối.", owner);
         return Result.Succeeded;
     }
 
@@ -49,9 +43,7 @@ public sealed class ConnectAiCommand : IExternalCommand
             var name = c.GetProperty("name").GetString();
             var detected = c.GetProperty("detected").GetBoolean();
             var configured = c.GetProperty("configured").GetBoolean();
-            text.AppendLine(!detected ? $"○ {name}: chưa cài"
-                : configured ? $"✓ {name}: đã kết nối"
-                : $"✗ {name}: chưa kết nối");
+            text.AppendLine(!detected ? $"○  {name}" : configured ? $"✓  {name}" : $"✗  {name}: chưa kết nối");
         }
         return text.ToString();
     }
@@ -105,7 +97,7 @@ public sealed class UpdateCommand : IExternalCommand
         }
         catch (Exception ex)
         {
-            TaskDialog.Show("InnoPro: Cập nhật", $"Không kiểm tra được bản mới (cần Internet): {ex.Message}");
+            InnoWindow.Message("Cập nhật", $"Không kiểm tra được (cần Internet): {ex.Message}", commandData.Application.MainWindowHandle);
             return Result.Cancelled;
         }
 
@@ -113,19 +105,12 @@ public sealed class UpdateCommand : IExternalCommand
         var latest = ParseVersion(latestTag);
         if (latest == null || current != null && latest <= current)
         {
-            TaskDialog.Show("InnoPro: Cập nhật", $"Đang dùng bản mới nhất ({App.Version}).");
+            InnoWindow.Message("Cập nhật", $"Đang dùng bản mới nhất ({App.Version}).", commandData.Application.MainWindowHandle);
             return Result.Succeeded;
         }
 
-        var dialog = new TaskDialog("InnoPro: Cập nhật")
-        {
-            MainInstruction = $"Có bản mới {latestTag} (đang dùng {App.Version})",
-            MainContent = notes.Length > 1200 ? notes[..1200] + "…" : notes,
-            CommonButtons = TaskDialogCommonButtons.Close,
-        };
-        dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Cài bản mới",
-            "Mở cửa sổ cài đặt. Bản mới có hiệu lực từ lần mở Revit sau.");
-        if (dialog.Show() != TaskDialogResult.CommandLink1) return Result.Succeeded;
+        var text = $"Có bản {latestTag} (đang dùng {App.Version}). Bản mới có hiệu lực từ lần mở Revit sau.";
+        if (InnoWindow.Choose("Cập nhật", text, commandData.Application.MainWindowHandle, "Cài bản mới", "Để sau") != 0) return Result.Succeeded;
 
         Process.Start(new ProcessStartInfo("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -NoExit -Command \"{Installer}\"")
         {

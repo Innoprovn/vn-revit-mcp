@@ -25,7 +25,7 @@ public sealed class CopyParameterValues : RevitCommandBase
         }
         """;
     public override TransactionMode TransactionMode => TransactionMode.Auto;
-    public override RibbonButton Ribbon => new("Chép\ntham số", "⇉");
+    public override RibbonButton Ribbon => new("Chép tham số", "⇉");
 
     public override object Execute(RevitCommandContext context, JsonElement arguments)
     {

@@ -33,7 +33,7 @@ public sealed class CountByLevel : RevitCommandBase
         """;
 
     // Có dòng này thì lệnh thành nút lớn trên ribbon; bỏ đi thì nằm trong menu "Lệnh khác".
-    public override RibbonButton Ribbon => new("Đếm theo\ntầng", "#");
+    public override RibbonButton Ribbon => new("Đếm theo tầng", "#");
 
     public override object Execute(RevitCommandContext context, JsonElement arguments)
     {

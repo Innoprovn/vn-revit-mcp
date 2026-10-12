@@ -4,36 +4,43 @@ using System.Text.Json;
 
 namespace InnoPro.Revit.Chat;
 
-/// <summary>Nhà cung cấp AI có sẵn. Thêm nhà cung cấp OpenAI-compatible mới chỉ cần thêm một dòng.</summary>
-internal sealed record ProviderPreset(string Id, string Name, bool IsAnthropic, string BaseUrl, bool NeedsKey, string DefaultModel, bool Local, string Hint);
+/// <summary>
+/// Nhà cung cấp AI. Kind: "anthropic" (SDK Anthropic), "openai" (API OpenAI-compatible), "desktop" (gói thuê bao
+/// qua ứng dụng ngoài nối MCP). Thêm nhà cung cấp OpenAI-compatible mới chỉ cần thêm một dòng.
+/// </summary>
+internal sealed record ProviderPreset(string Id, string Name, string Kind, string BaseUrl, bool NeedsKey, string DefaultModel, string Hint)
+{
+    public bool IsAnthropic => Kind == "anthropic";
+    public bool IsDesktop => Kind == "desktop";
+    public bool Local => BaseUrl.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase);
+}
 
 internal static class ProviderPresets
 {
+    // Hint: một dòng ngắn, chỉ nói lấy key ở đâu.
     public static readonly IReadOnlyList<ProviderPreset> All =
     [
-        new("anthropic", "Claude (Anthropic)", true, "", true, "claude-opus-5-5", false,
-            "Lấy API key tại console.anthropic.com. Model gợi ý: claude-opus-5-5, claude-sonnet-5-5 (rẻ hơn), claude-haiku-5-5 (rẻ nhất)."),
-        new("openai", "OpenAI", false, "https://api.openai.com/v1", true, "", false,
-            "Lấy API key tại platform.openai.com, rồi bấm ↻ để chọn model."),
-        new("gemini", "Google Gemini", false, "https://generativelanguage.googleapis.com/v1beta/openai", true, "", false,
-            "Lấy API key tại aistudio.google.com, rồi bấm ↻ để chọn model."),
-        new("openrouter", "OpenRouter (nhiều model)", false, "https://openrouter.ai/api/v1", true, "", false,
-            "Một API key dùng được nhiều model của nhiều hãng. Lấy key tại openrouter.ai."),
-        new("ollama", "Ollama (chạy trên máy)", false, "http://localhost:11434/v1", false, "", true,
-            "Chạy hoàn toàn trên máy, không gửi dữ liệu ra ngoài. Cài Ollama, tải một model hỗ trợ tool (ví dụ qwen), rồi bấm ↻."),
-        new("lmstudio", "LM Studio (chạy trên máy)", false, "http://localhost:1234/v1", false, "", true,
-            "Chạy hoàn toàn trên máy. Mở LM Studio, bật Local Server, nạp một model hỗ trợ tool, rồi bấm ↻."),
-        new("custom", "Tùy chỉnh (OpenAI-compatible)", false, "http://localhost:8000/v1", false, "", false,
-            "Mọi máy chủ có API dạng OpenAI Chat Completions. Nhập địa chỉ trong ô Base URL."),
+        new("claude-desktop", "Claude (gói Pro/Max)", "desktop", "", false, "", "Dùng gói Claude qua ứng dụng Claude Desktop"),
+        new("anthropic", "Claude API", "anthropic", "", true, "claude-opus-5-5", "Key: console.anthropic.com"),
+        new("openai", "OpenAI", "openai", "https://api.openai.com/v1", true, "", "Key: platform.openai.com"),
+        new("gemini", "Google Gemini", "openai", "https://generativelanguage.googleapis.com/v1beta/openai", true, "", "Key: aistudio.google.com"),
+        new("deepseek", "DeepSeek", "openai", "https://api.deepseek.com/v1", true, "deepseek-chat", "Key: platform.deepseek.com"),
+        new("qwen", "Qwen (Alibaba)", "openai", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", true, "qwen-plus", "Key: Alibaba Cloud Model Studio"),
+        new("kimi", "Kimi (Moonshot)", "openai", "https://api.moonshot.ai/v1", true, "", "Key: platform.moonshot.ai"),
+        new("glm", "GLM (Zhipu)", "openai", "https://api.z.ai/api/paas/v4", true, "", "Key: z.ai"),
+        new("minimax", "MiniMax", "openai", "https://api.minimax.io/v1", true, "", "Key: minimax.io"),
+        new("openrouter", "OpenRouter", "openai", "https://openrouter.ai/api/v1", true, "", "Một key, nhiều model · openrouter.ai"),
+        new("ollama", "Ollama (trên máy)", "openai", "http://localhost:11434/v1", false, "", "Chạy trên máy, dữ liệu không ra ngoài"),
+        new("lmstudio", "LM Studio (trên máy)", "openai", "http://localhost:1234/v1", false, "", "Chạy trên máy, dữ liệu không ra ngoài"),
+        new("custom", "Tùy chỉnh", "openai", "http://localhost:8000/v1", false, "", "Máy chủ API dạng OpenAI"),
     ];
 
     public static ProviderPreset Get(string id) => All.FirstOrDefault(p => p.Id == id) ?? All[0];
 }
-
 /// <summary>Cài đặt chat (không chứa bí mật) lưu ở chat.json; API key lưu trong Windows Credential Manager.</summary>
 internal sealed class ChatSettings
 {
-    public string Provider { get; set; } = "anthropic";
+    public string Provider { get; set; } = "claude-desktop";
     public Dictionary<string, string> Models { get; set; } = [];
     public Dictionary<string, string> BaseUrls { get; set; } = [];
     public bool DataNoticeAccepted { get; set; }

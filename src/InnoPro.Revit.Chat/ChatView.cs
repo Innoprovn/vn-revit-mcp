@@ -1,8 +1,12 @@
+using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using InnoPro.Bridge;
+using InnoPro.Ui;
 
 namespace InnoPro.Revit.Chat;
 
@@ -12,29 +16,28 @@ public static class ChatModule
     public static FrameworkElement CreateView(IRevitHost host) => new ChatView(host);
 }
 
-/// <summary>Khung chat AI trong Revit. Dựng bằng mã (không XAML) cho gọn.</summary>
+/// <summary>Khung chat AI trong Revit: gọn, tự vẽ theo theme InnoPro.</summary>
 internal sealed class ChatView : UserControl
 {
     private static readonly Brush UserBubble = new SolidColorBrush(Color.FromRgb(0xDC, 0xEB, 0xFA));
-    private static readonly Brush AssistantBubble = new SolidColorBrush(Color.FromRgb(0xF4, 0xF5, 0xF7));
-    private static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x6B, 0x72, 0x80));
-    private static readonly Brush ErrorBrush = new SolidColorBrush(Color.FromRgb(0xB4, 0x23, 0x18));
+    private static readonly Brush AssistantBubble = new SolidColorBrush(Color.FromRgb(0xF3, 0xF5, 0xF7));
 
     private readonly IRevitHost _host;
     private readonly ChatEngine _engine;
     private readonly ChatSettings _settings;
 
-    private readonly ComboBox _providerBox = new() { MinWidth = 150 };
-    private readonly ComboBox _modelBox = new() { IsEditable = true };
-    private readonly TextBox _baseUrlBox = new() { Margin = new Thickness(0, 4, 0, 0) };
-    private readonly StackPanel _baseUrlRow = new();
-    private readonly TextBlock _hint = new() { TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = Muted, Margin = new Thickness(0, 4, 0, 0) };
-    private readonly StackPanel _transcript = new() { Margin = new Thickness(6) };
+    private readonly ComboBox _providerBox = new();
+    private readonly ComboBox _modelBox = new() { IsEditable = true, Margin = new Thickness(0, 6, 0, 0) };
+    private readonly TextBox _baseUrlBox = new() { Margin = new Thickness(0, 6, 0, 0), ToolTip = "Base URL" };
+    private readonly TextBlock _hint = new() { FontSize = 11, Foreground = Theme.Muted, Margin = new Thickness(0, 5, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly StackPanel _transcript = new() { Margin = new Thickness(8, 6, 8, 6) };
     private readonly ScrollViewer _scroll = new() { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-    private readonly TextBox _input = new() { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 54, MaxHeight = 160, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-    private readonly Button _send = new() { Content = "Gửi", Width = 64, Margin = new Thickness(4, 0, 0, 0) };
-    private readonly Button _stop = new() { Content = "Dừng", Width = 64, Margin = new Thickness(4, 4, 0, 0), IsEnabled = false };
-    private readonly TextBlock _status = new() { FontSize = 11, Foreground = Muted, Margin = new Thickness(6, 2, 6, 2) };
+    private readonly Grid _chatArea = new();
+    private readonly StackPanel _desktopCard = new() { Margin = new Thickness(16, 24, 16, 0), Visibility = Visibility.Collapsed };
+    private readonly DockPanel _inputBar = new() { Margin = new Thickness(8) };
+    private readonly TextBox _input = new() { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 48, MaxHeight = 150, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+    private readonly Button _send = new() { Content = "Gửi", Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Bottom };
+    private readonly TextBlock _status = new() { FontSize = 11, Foreground = Theme.Muted, Margin = new Thickness(10, 0, 10, 4), TextTrimming = TextTrimming.CharacterEllipsis };
 
     private CancellationTokenSource? _running;
     private bool _providerReady;
@@ -44,7 +47,10 @@ internal sealed class ChatView : UserControl
         _host = host;
         _engine = new ChatEngine(host);
         _settings = ChatSettings.Load(host.DataDir);
+        Theme.Apply(this);
+        Background = Theme.Surface;
         Content = Build();
+        _send.Style = (Style)FindResource("Primary");
 
         foreach (var preset in ProviderPresets.All) _providerBox.Items.Add(preset.Name);
         _providerBox.SelectedIndex = Math.Max(0, ProviderPresets.All.ToList().FindIndex(p => p.Id == _settings.Provider));
@@ -52,100 +58,118 @@ internal sealed class ChatView : UserControl
         _modelBox.LostFocus += (_, _) => ApplyProvider();
         _modelBox.SelectionChanged += (_, _) => Dispatcher.BeginInvoke(ApplyProvider);
         _baseUrlBox.LostFocus += (_, _) => ApplyProvider();
-        _send.Click += (_, _) => Send();
-        _stop.Click += (_, _) => _running?.Cancel();
+        _send.Click += (_, _) => { if (_running != null) _running.Cancel(); else Send(); };
         _input.PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0) { e.Handled = true; Send(); }
         };
 
         OnProviderChanged();
-        AddLine($"vn-revit-mcp {host.Version}. Hỏi bằng tiếng Việt, ví dụ: \"Mô hình có bao nhiêu cột? Cột nào bị trùng?\"", Muted);
     }
 
     private ProviderPreset Preset => ProviderPresets.All[Math.Max(0, _providerBox.SelectedIndex)];
 
     private UIElement Build()
     {
-        var root = new DockPanel { Background = Brushes.White };
+        var root = new DockPanel();
 
-        var top = new StackPanel { Margin = new Thickness(6) };
+        var top = new StackPanel { Margin = new Thickness(8, 8, 8, 4) };
         var row = new DockPanel();
-        var newChat = SmallButton("Mới", "Bắt đầu cuộc trò chuyện mới");
-        newChat.Click += (_, _) => { _engine.Reset(); _transcript.Children.Clear(); _status.Text = "Cuộc trò chuyện mới."; };
-        var key = SmallButton("Key", "Nhập hoặc xóa API key (lưu trong Windows Credential Manager)");
-        key.Click += (_, _) => EditKey();
-        var models = SmallButton("↻", "Tải danh sách model từ nhà cung cấp");
-        models.Click += async (_, _) => await LoadModels();
-        DockPanel.SetDock(newChat, Dock.Right);
-        DockPanel.SetDock(key, Dock.Right);
-        DockPanel.SetDock(models, Dock.Right);
-        row.Children.Add(newChat);
-        row.Children.Add(key);
-        row.Children.Add(models);
+        foreach (var (glyph, tip, action) in new (string, string, Action)[]
+                 {
+                     ("＋", "Cuộc trò chuyện mới", () => { _engine.Reset(); _transcript.Children.Clear(); _status.Text = ""; }),
+                     ("🔑", "API key", EditKey),
+                     ("↻", "Tải danh sách model", async () => await LoadModels()),
+                 })
+        {
+            var b = new Button { Content = glyph, ToolTip = tip, Style = (Style)FindResource("Icon"), Margin = new Thickness(2, 0, 0, 0) };
+            b.Click += (_, _) => action();
+            DockPanel.SetDock(b, Dock.Right);
+            row.Children.Add(b);
+        }
         row.Children.Add(_providerBox);
         top.Children.Add(row);
-        var modelRow = new DockPanel { Margin = new Thickness(0, 4, 0, 0) };
-        var modelLabel = new TextBlock { Text = "Model", Width = 52, VerticalAlignment = VerticalAlignment.Center, Foreground = Muted, FontSize = 11 };
-        modelRow.Children.Add(modelLabel);
-        modelRow.Children.Add(_modelBox);
-        top.Children.Add(modelRow);
-        _baseUrlRow.Children.Add(new TextBlock { Text = "Base URL", FontSize = 11, Foreground = Muted, Margin = new Thickness(0, 4, 0, 0) });
-        _baseUrlRow.Children.Add(_baseUrlBox);
-        top.Children.Add(_baseUrlRow);
+        top.Children.Add(_modelBox);
+        top.Children.Add(_baseUrlBox);
         top.Children.Add(_hint);
-        if (!_settings.DataNoticeAccepted) top.Children.Add(DataNotice(top));
         DockPanel.SetDock(top, Dock.Top);
         root.Children.Add(top);
+        root.Children.Add(new Border { Height = 1, Background = Theme.Line, Margin = new Thickness(0, 4, 0, 0) }.Also(b => DockPanel.SetDock(b, Dock.Top)));
 
-        var bottom = new DockPanel { Margin = new Thickness(6) };
-        var buttons = new StackPanel();
-        buttons.Children.Add(_send);
-        buttons.Children.Add(_stop);
-        DockPanel.SetDock(buttons, Dock.Right);
-        bottom.Children.Add(buttons);
-        bottom.Children.Add(_input);
-        DockPanel.SetDock(bottom, Dock.Bottom);
-        root.Children.Add(bottom);
+        DockPanel.SetDock(_send, Dock.Right);
+        _inputBar.Children.Add(_send);
+        _inputBar.Children.Add(_input);
+        DockPanel.SetDock(_inputBar, Dock.Bottom);
+        root.Children.Add(_inputBar);
         DockPanel.SetDock(_status, Dock.Bottom);
         root.Children.Add(_status);
 
         _scroll.Content = _transcript;
-        root.Children.Add(_scroll);
+        _chatArea.Children.Add(_scroll);
+        BuildDesktopCard();
+        _chatArea.Children.Add(_desktopCard);
+        root.Children.Add(_chatArea);
         return root;
     }
 
-    /// <summary>Nói rõ dữ liệu đi đâu trước khi dùng (quy tắc: luồng dữ liệu ra ngoài phải được nói rõ).</summary>
-    private UIElement DataNotice(Panel parent)
+    /// <summary>Gói thuê bao (Claude Pro/Max): không gọi API, chỉ nối Claude Desktop với Revit qua MCP rồi mở ứng dụng.</summary>
+    private void BuildDesktopCard()
     {
-        var box = new Border
+        _desktopCard.Children.Add(new TextBlock { Text = "Claude Pro/Max", FontSize = 15, FontWeight = FontWeights.SemiBold });
+        _desktopCard.Children.Add(new TextBlock
         {
-            Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xF7, 0xE0)),
-            Padding = new Thickness(8),
-            Margin = new Thickness(0, 6, 0, 0),
-        };
-        var panel = new StackPanel();
-        panel.Children.Add(new TextBlock
-        {
-            TextWrapping = TextWrapping.Wrap,
-            FontSize = 11,
-            Text = "Câu hỏi của bạn và kết quả lệnh (tên, tham số phần tử trong mô hình) được gửi tới nhà cung cấp AI bạn chọn. " +
-                   "Muốn dữ liệu không rời khỏi máy, hãy chọn Ollama hoặc LM Studio.",
+            Text = "Hỏi trong Claude Desktop, Claude tự làm việc với Revit.",
+            Foreground = Theme.Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 14),
         });
-        var ok = new Button { Content = "Đã hiểu", HorizontalAlignment = HorizontalAlignment.Right, Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(0, 4, 0, 0) };
-        ok.Click += (_, _) =>
-        {
-            _settings.DataNoticeAccepted = true;
-            _settings.Save(_host.DataDir);
-            parent.Children.Remove(box);
-        };
-        panel.Children.Add(ok);
-        box.Child = panel;
-        return box;
+        var open = new Button { Content = "Kết nối và mở Claude", Style = (Style)FindResource("Primary"), HorizontalAlignment = HorizontalAlignment.Left };
+        open.Click += async (_, _) => await OpenClaudeDesktop();
+        _desktopCard.Children.Add(open);
     }
 
-    private static Button SmallButton(string text, string tooltip) =>
-        new() { Content = text, ToolTip = tooltip, MinWidth = 30, Margin = new Thickness(4, 0, 0, 0), Padding = new Thickness(6, 1, 6, 1) };
+    private async Task OpenClaudeDesktop()
+    {
+        _status.Text = "Đang kết nối…";
+        var exe = Path.Combine(_host.DataDir, "current", "server", "vn-revit-mcp.exe");
+        var restart = false;
+        try
+        {
+            var output = await Task.Run(() =>
+            {
+                using var p = Process.Start(new ProcessStartInfo(exe, "setup --clients claude-desktop --json")
+                {
+                    RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true, StandardOutputEncoding = Encoding.UTF8,
+                })!;
+                var text = p.StandardOutput.ReadToEnd();
+                p.WaitForExit(60_000);
+                return text;
+            });
+            using var doc = JsonDocument.Parse(output);
+            var client = doc.RootElement.GetProperty("clients").EnumerateArray().FirstOrDefault();
+            if (client.ValueKind == JsonValueKind.Object && client.TryGetProperty("action", out var act) && act.GetString() == "not_found")
+            {
+                Process.Start(new ProcessStartInfo("https://claude.ai/download") { UseShellExecute = true });
+                _status.Text = "Chưa có Claude Desktop: tải về, cài, rồi bấm lại.";
+                return;
+            }
+            restart = client.ValueKind == JsonValueKind.Object && client.TryGetProperty("action", out var a) && a.GetString() is "configured" or "updated";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = $"Không kết nối được: {ex.Message}";
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo("claude://") { UseShellExecute = true });
+            _status.Text = restart ? "Đã kết nối. Nếu Claude đang mở, thoát hẳn rồi mở lại." : "Đã mở Claude Desktop.";
+        }
+        catch
+        {
+            Process.Start(new ProcessStartInfo("https://claude.ai/download") { UseShellExecute = true });
+            _status.Text = "Chưa có Claude Desktop: tải về, cài, rồi bấm lại.";
+        }
+    }
 
     private void OnProviderChanged()
     {
@@ -154,8 +178,14 @@ internal sealed class ChatView : UserControl
         _modelBox.Items.Clear();
         _modelBox.Text = _settings.ModelFor(preset);
         _baseUrlBox.Text = _settings.BaseUrlFor(preset);
-        _baseUrlRow.Visibility = preset.IsAnthropic ? Visibility.Collapsed : Visibility.Visible;
         _hint.Text = preset.Hint;
+
+        var desktop = preset.IsDesktop;
+        _modelBox.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
+        _baseUrlBox.Visibility = preset.Id == "custom" ? Visibility.Visible : Visibility.Collapsed;
+        _desktopCard.Visibility = desktop ? Visibility.Visible : Visibility.Collapsed;
+        _scroll.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
+        _inputBar.Visibility = desktop ? Visibility.Collapsed : Visibility.Visible;
         ApplyProvider();
     }
 
@@ -163,81 +193,69 @@ internal sealed class ChatView : UserControl
     private void ApplyProvider()
     {
         var preset = Preset;
+        _providerReady = false;
+        _status.Text = "";
+        TrySaveSettings();
+        if (preset.IsDesktop) return;
+
         var model = _modelBox.Text.Trim();
         _settings.Models[preset.Id] = model;
-        if (!preset.IsAnthropic) _settings.BaseUrls[preset.Id] = _baseUrlBox.Text.Trim();
+        if (preset.Id == "custom") _settings.BaseUrls[preset.Id] = _baseUrlBox.Text.Trim();
         TrySaveSettings();
 
-        var key = preset.NeedsKey || preset.Id == "custom" ? CredentialStore.Read(preset.Id) : null;
-        _providerReady = false;
-        if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = $"Cần API key cho {preset.Name}: bấm nút Key."; return; }
-        if (model.Length == 0) { _status.Text = "Chọn model: bấm ↻ để tải danh sách, hoặc gõ tên model."; return; }
+        var key = CredentialStore.Read(preset.Id);
+        if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = "Cần API key: bấm 🔑"; return; }
+        if (model.Length == 0) { _status.Text = "Chọn model: bấm ↻"; return; }
 
         _engine.Use(preset.IsAnthropic
             ? new AnthropicProvider(key!, model)
             : new OpenAiCompatibleProvider(_settings.BaseUrlFor(preset), key, model));
         _providerReady = true;
-        _status.Text = $"{preset.Name} · {model}" + (preset.Local ? " · chạy trên máy" : "");
+        _status.Text = preset.Local ? $"{model} · trên máy" : model;
     }
 
     private async Task LoadModels()
     {
         var preset = Preset;
+        if (preset.IsDesktop) return;
         var key = CredentialStore.Read(preset.Id);
-        if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = "Nhập API key trước (nút Key)."; return; }
+        if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = "Cần API key: bấm 🔑"; return; }
         try
         {
-            _status.Text = "Đang tải danh sách model…";
+            _status.Text = "Đang tải model…";
             IChatProvider probe = preset.IsAnthropic
                 ? new AnthropicProvider(key!, "")
-                : new OpenAiCompatibleProvider(_baseUrlBox.Text.Trim(), key, "");
+                : new OpenAiCompatibleProvider(_settings.BaseUrlFor(preset), key, "");
             var models = await probe.ListModelsAsync(CancellationToken.None);
             var current = _modelBox.Text;
             _modelBox.Items.Clear();
             foreach (var m in models) _modelBox.Items.Add(m);
             _modelBox.Text = current.Length > 0 ? current : models.FirstOrDefault() ?? "";
-            _status.Text = $"{models.Count} model. Chọn trong danh sách.";
+            _status.Text = $"{models.Count} model";
             _modelBox.IsDropDownOpen = models.Count > 0;
         }
         catch (Exception ex)
         {
-            _status.Text = ex is ChatException ? ex.Message : $"Không tải được danh sách model: {ex.Message}";
+            _status.Text = ex is ChatException ? ex.Message : $"Không tải được model: {ex.Message}";
         }
     }
 
     private void EditKey()
     {
         var preset = Preset;
-        var window = new Window
-        {
-            Title = $"API key: {preset.Name}",
-            Width = 420,
-            SizeToContent = SizeToContent.Height,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize,
-        };
-        var panel = new StackPanel { Margin = new Thickness(12) };
-        panel.Children.Add(new TextBlock { Text = preset.Hint, TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = Muted, Margin = new Thickness(0, 0, 0, 8) });
+        if (preset.IsDesktop) return;
+        var window = new InnoWindow($"API key · {preset.Name}", width: 380);
         var box = new PasswordBox();
-        panel.Children.Add(box);
-        panel.Children.Add(new TextBlock
-        {
-            Text = "Key được lưu trong Windows Credential Manager của tài khoản này, không ghi ra file.",
-            TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = Muted, Margin = new Thickness(0, 6, 0, 8),
-        });
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var save = new Button { Content = "Lưu", Width = 70, IsDefault = true };
-        var delete = new Button { Content = "Xóa key", Width = 70, Margin = new Thickness(6, 0, 0, 0) };
-        save.Click += (_, _) =>
+        var panel = new StackPanel { Margin = new Thickness(16, 14, 16, 4) };
+        panel.Children.Add(InnoWindow.Hint(preset.Hint));
+        panel.Children.Add(box.Also(b => b.Margin = new Thickness(0, 8, 0, 0)));
+        window.Body = panel;
+        window.AddButton("Xóa key", onClick: () => CredentialStore.Delete(preset.Id), closes: true);
+        window.AddButton("Lưu", primary: true, onClick: () =>
         {
             if (box.Password.Trim().Length > 0) CredentialStore.Write(preset.Id, box.Password.Trim());
-            window.Close();
-        };
-        delete.Click += (_, _) => { CredentialStore.Delete(preset.Id); window.Close(); };
-        buttons.Children.Add(save);
-        buttons.Children.Add(delete);
-        panel.Children.Add(buttons);
-        window.Content = panel;
+        }, closes: true);
+        window.Loaded += (_, _) => box.Focus();
         window.ShowDialog();
         ApplyProvider();
     }
@@ -249,6 +267,8 @@ internal sealed class ChatView : UserControl
         if (!_providerReady) { ApplyProvider(); if (!_providerReady) return; }
 
         _input.Clear();
+        if (_transcript.Children.Count == 0 && !Preset.Local)
+            AddLine($"Câu hỏi và dữ liệu lệnh được gửi tới {Preset.Name}.", Theme.Muted);
         AddBubble(text, user: true);
         _running = new CancellationTokenSource();
         SetBusy(true);
@@ -259,22 +279,20 @@ internal sealed class ChatView : UserControl
                 switch (kind)
                 {
                     case "assistant": AddBubble(content, user: false); break;
-                    case "tool": AddLine("⚙ " + content, Muted); break;
-                    case "tool_error": AddLine("⚠ " + content, ErrorBrush); break;
+                    case "tool": AddLine("· " + content, Theme.Muted); break;
+                    case "tool_error": AddLine("! " + content, Theme.Danger); break;
                 }
             }), _running.Token);
-            _status.Text = "Xong.";
+            _status.Text = "";
         }
         catch (OperationCanceledException)
         {
-            AddLine("Đã dừng.", Muted);
+            AddLine("Đã dừng.", Theme.Muted);
             _engine.Reset();
-            _status.Text = "Đã dừng; bắt đầu lại cuộc trò chuyện để tránh lịch sử dang dở.";
         }
         catch (Exception ex)
         {
-            AddLine(ex is ChatException ? ex.Message : $"Lỗi: {ex.Message}", ErrorBrush);
-            _status.Text = "Có lỗi. Kiểm tra key, model hoặc kết nối rồi gửi lại.";
+            AddLine(ex is ChatException ? ex.Message : $"Lỗi: {ex.Message}", Theme.Danger);
         }
         finally
         {
@@ -286,30 +304,25 @@ internal sealed class ChatView : UserControl
 
     private void SetBusy(bool busy)
     {
-        _send.IsEnabled = !busy;
-        _stop.IsEnabled = busy;
-        if (busy) _status.Text = "Đang xử lý…";
+        _send.Content = busy ? "Dừng" : "Gửi";
+        _status.Text = busy ? "Đang xử lý…" : _status.Text;
     }
 
     private void AddBubble(string text, bool user)
     {
-        var bubble = new Border
+        _transcript.Children.Add(new Border
         {
             Background = user ? UserBubble : AssistantBubble,
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(8, 5, 8, 5),
-            Margin = new Thickness(user ? 30 : 0, 4, user ? 0 : 30, 4),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(10, 6, 10, 6),
+            Margin = new Thickness(user ? 36 : 0, 4, user ? 0 : 36, 4),
             HorizontalAlignment = user ? HorizontalAlignment.Right : HorizontalAlignment.Left,
             Child = new TextBox
             {
-                Text = text,
-                IsReadOnly = true,
-                TextWrapping = TextWrapping.Wrap,
-                BorderThickness = new Thickness(0),
-                Background = Brushes.Transparent,
+                Text = text, IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
+                BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(0),
             },
-        };
-        _transcript.Children.Add(bubble);
+        });
         _scroll.ScrollToEnd();
     }
 
@@ -322,5 +335,14 @@ internal sealed class ChatView : UserControl
     private void TrySaveSettings()
     {
         try { _settings.Save(_host.DataDir); } catch (IOException) { }
+    }
+}
+
+internal static class FluentExtensions
+{
+    public static T Also<T>(this T value, Action<T> configure)
+    {
+        configure(value);
+        return value;
     }
 }

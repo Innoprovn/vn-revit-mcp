@@ -4,6 +4,7 @@ using System.Text.Json;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using InnoPro.Revit.Sdk;
+using InnoPro.Ui;
 
 namespace InnoPro.Revit.Commands.Code;
 
@@ -52,7 +53,7 @@ public sealed class RunCSharp : RevitCommandBase
         var (entry, loadContext) = ScriptCompiler.Compile(code);
         try
         {
-            if (write && !Confirm(summary!, code))
+            if (write && !Confirm(context, summary!, code))
                 throw new CommandException("Người dùng đã từ chối chạy mã sửa mô hình.");
 
             return Run(context, entry, write);
@@ -102,21 +103,27 @@ public sealed class RunCSharp : RevitCommandBase
         return new { status, result = Simplify(result, depth: 0), output };
     }
 
-    private static bool Confirm(string summary, string code)
+    private static bool Confirm(RevitCommandContext context, string summary, string code)
     {
-        var preview = code.Length > 3000 ? code[..3000] + "\n..." : code;
-        var dialog = new TaskDialog("InnoPro: AI muốn sửa mô hình")
+        var window = new InnoWindow("AI muốn sửa mô hình", context.UIApplication.MainWindowHandle, width: 640);
+        var panel = new System.Windows.Controls.DockPanel { Margin = new System.Windows.Thickness(16, 12, 16, 0) };
+        var text = new System.Windows.Controls.TextBlock { Text = summary + "\nCó thể Undo sau khi chạy.", TextWrapping = System.Windows.TextWrapping.Wrap, Margin = new System.Windows.Thickness(0, 0, 0, 8) };
+        System.Windows.Controls.DockPanel.SetDock(text, System.Windows.Controls.Dock.Top);
+        panel.Children.Add(text);
+        panel.Children.Add(new System.Windows.Controls.TextBox
         {
-            MainIcon = TaskDialogIcon.TaskDialogIconWarning,
-            MainInstruction = "AI muốn chạy mã C# có SỬA mô hình",
-            MainContent = summary + "\n\nCó thể Undo sau khi chạy. Bấm 'Show details' để xem mã.",
-            ExpandedContent = preview,
-            CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
-            DefaultButton = TaskDialogResult.No,
-        };
-        return dialog.Show() == TaskDialogResult.Yes;
+            Text = code.Length > 6000 ? code[..6000] + "\n…" : code,
+            IsReadOnly = true, MaxHeight = 320, FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+        });
+        window.Body = panel;
+        var accepted = false;
+        window.AddButton("Không", closes: true);
+        window.AddButton("Cho chạy", primary: true, onClick: () => accepted = true, closes: true);
+        window.ShowDialog();
+        return accepted;
     }
-
     /// <summary>Biến kết quả thành dạng JSON an toàn: Element thì tóm tắt, danh sách thì giới hạn.</summary>
     private static object? Simplify(object? value, int depth)
     {

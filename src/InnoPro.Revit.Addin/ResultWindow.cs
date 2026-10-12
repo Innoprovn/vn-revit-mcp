@@ -2,10 +2,10 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
 using System.Windows.Media;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using InnoPro.Ui;
 using TextBox = System.Windows.Controls.TextBox;
 
 namespace InnoPro.Revit.Addin;
@@ -26,16 +26,7 @@ internal static class ResultWindow
         var ids = new HashSet<long>();
         CollectIds(result, null, ids);
 
-        var window = new Window
-        {
-            Title = $"InnoPro: {title}",
-            Width = 760,
-            Height = 520,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            ShowInTaskbar = false,
-        };
-        new WindowInteropHelper(window) { Owner = app.MainWindowHandle };
-
+        var window = new InnoWindow(title, app.MainWindowHandle, width: 720, resizable: true) { Height = 480 };
         var body = new TextBox
         {
             Text = text.Length == 0 ? "Xong." : text.ToString(),
@@ -45,36 +36,23 @@ internal static class ResultWindow
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             BorderThickness = new Thickness(0),
+            Padding = new Thickness(14, 10, 14, 10),
         };
+        window.Body = body;
 
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(8) };
+        window.AddButton("Sao chép", onClick: () => Clipboard.SetText(body.Text));
         if (ids.Count > 0 && app.ActiveUIDocument is { } uiDoc)
         {
-            var select = new Button { Content = $"Chọn {ids.Count} phần tử trong Revit", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 8, 0) };
-            select.Click += (_, _) =>
+            window.AddButton($"Chọn {ids.Count} phần tử", onClick: () =>
             {
                 var existing = ids.Select(id => new ElementId(id)).Where(id => uiDoc.Document.GetElement(id) != null).ToList();
                 uiDoc.Selection.SetElementIds(existing);
                 if (existing.Count > 0) uiDoc.ShowElements(existing);
-                window.Close();
-            };
-            buttons.Children.Add(select);
+            }, closes: true);
         }
-        var copy = new Button { Content = "Sao chép", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 8, 0) };
-        copy.Click += (_, _) => Clipboard.SetText(body.Text);
-        var close = new Button { Content = "Đóng", Padding = new Thickness(10, 3, 10, 3), IsCancel = true };
-        close.Click += (_, _) => window.Close();
-        buttons.Children.Add(copy);
-        buttons.Children.Add(close);
-
-        var layout = new DockPanel();
-        DockPanel.SetDock(buttons, Dock.Bottom);
-        layout.Children.Add(buttons);
-        layout.Children.Add(body);
-        window.Content = layout;
+        window.AddButton("Đóng", primary: true, closes: true);
         window.ShowDialog();
     }
-
     private static void Format(JsonElement e, StringBuilder sb, int indent)
     {
         var pad = new string(' ', indent * 2);
@@ -88,10 +66,10 @@ internal static class ResultWindow
                 {
                     if (p.Value.ValueKind is JsonValueKind.Null) continue;
                     if (IsScalar(p.Value) || IsScalarArray(p.Value))
-                        sb.Append(pad).Append(p.Name).Append(": ").AppendLine(Scalar(p.Value));
+                        sb.Append(pad).Append(Labels.Humanize(p.Name)).Append(": ").AppendLine(Scalar(p.Value));
                     else
                     {
-                        sb.Append(pad).Append(p.Name).AppendLine(":");
+                        sb.Append(pad).Append(Labels.Humanize(p.Name)).AppendLine(":");
                         Format(p.Value, sb, indent + 1);
                     }
                 }
@@ -124,7 +102,7 @@ internal static class ResultWindow
 
     private static void FormatTable(JsonElement e, StringBuilder sb, string pad)
     {
-        var columns = e.GetProperty("columns").EnumerateArray().Select(c => c.ToString()).ToList();
+        var columns = e.GetProperty("columns").EnumerateArray().Select(c => Labels.Humanize(c.ToString())).ToList();
         var rows = e.GetProperty("rows").EnumerateArray().Select(r => r.EnumerateArray().Select(Scalar).ToArray()).ToList();
         int? total = e.TryGetProperty("total", out var t) && t.ValueKind == JsonValueKind.Number ? t.GetInt32() : null;
         WriteTable(columns, rows, sb, pad, total);
