@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   Phát hành một lệnh: đóng gói, cập nhật server.json, commit, tạo GitHub release (zip + .mcpb).
@@ -24,7 +24,11 @@ $version = ([xml](Get-Content (Join-Path $root "Directory.Build.props") -Raw -En
 $tag = "v$version"
 Push-Location $root
 try {
-    if (& $gh release view $tag 2>$null) { throw "Đã có release $tag. Tăng <Version> trong Directory.Build.props trước." }
+    $ErrorActionPreference = "Continue"
+    & $gh release view $tag --json tagName 2>&1 | Out-Null
+    $exists = $LASTEXITCODE -eq 0
+    $ErrorActionPreference = "Stop"
+    if ($exists) { throw "Đã có release $tag. Tăng <Version> trong Directory.Build.props trước." }
     $dirty = git status --porcelain -- . ':!server.json' ':!artifacts'
     if ($dirty) { throw "Còn thay đổi chưa commit:`n$dirty" }
 
