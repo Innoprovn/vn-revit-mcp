@@ -198,7 +198,8 @@ public sealed class FindClashes : RevitCommandBase
         if (Args.GetStringOrDefault(arguments, "level") is { } levelName)
         {
             var level = Lookup.Level(doc, levelName);
-            sources = sources.Where(e => e.LevelId == level.Id);
+            // Dầm không có LevelId (dùng Reference Level): lấy tầng như find_elements.
+            sources = sources.Where(e => ElementInfo.LevelName(doc, e) == level.Name);
         }
         var sourceList = sources.Take(MaxSourceElements + 1).ToList();
         if (sourceList.Count > MaxSourceElements)

@@ -109,8 +109,28 @@ public sealed class UpdateCommand : IExternalCommand
             return Result.Succeeded;
         }
 
-        var text = $"Có bản {latestTag} (đang dùng {App.Version}). Bản mới có hiệu lực từ lần mở Revit sau.";
+        var text = $"Có bản {latestTag} (đang dùng {App.Version}). Revit đang mở sẽ tự nạp bản mới vài giây sau khi cài xong.";
         if (InnoWindow.Choose("Cập nhật", text, commandData.Application.MainWindowHandle, "Cài bản mới", "Để sau") != 0) return Result.Succeeded;
+
+        // Bản cài chuẩn: dùng bộ tự cập nhật của server (kiểm SHA-256, chạy ẩn). Bản build tay: chạy bộ cài một dòng.
+        var exe = Path.GetFullPath(Path.Combine(Paths.AddinDir, "..", "server", "vn-revit-mcp.exe"));
+        if (File.Exists(exe))
+        {
+            Task.Run(() =>
+            {
+                using var p = Process.Start(new ProcessStartInfo(exe, "update")
+                {
+                    UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                })!;
+                var output = p.StandardOutput.ReadToEnd().Trim();
+                p.WaitForExit();
+                Log.Info("Cập nhật: " + (output.Length > 0 ? output : $"mã thoát {p.ExitCode}"));
+            });
+            InnoWindow.Message("Cập nhật", "Đang tải và cài bản mới ở chế độ nền. Xong, Revit tự nạp bản mới, không cần tắt Revit.",
+                commandData.Application.MainWindowHandle);
+            return Result.Succeeded;
+        }
 
         Process.Start(new ProcessStartInfo("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -NoExit -Command \"{Installer}\"")
         {
