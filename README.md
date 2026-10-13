@@ -7,6 +7,10 @@
 - **Mỗi lệnh dùng được hai cách:** người bấm nút trên tab **InnoPro** (form nhập tự sinh), hoặc AI gọi.
 - **Viết lệnh mới bằng một file `.cs`**, không cần build: thả vào thư mục, bấm *Nạp lại lệnh*. Hoặc nhờ AI viết.
 - **Tiết kiệm token:** AI chỉ thấy vài lệnh hay dùng, tra thêm khi cần; kết quả trả dạng bảng gọn.
+- **Làm được cả việc không có API:** "bàn tay ảo" chạy lệnh có sẵn của Revit và bấm vào view như người dùng (vd dim, vẽ), tự kiểm tra kết quả; AI nhìn được view qua ảnh.
+- **Hiểu Revit sâu:** tra Revit API của bản cài trên máy kèm bài The Building Coder, bộ kỹ năng đã kiểm chứng (`revit_skill`).
+- **Tự cập nhật và nạp nóng:** server, add-in, tiện ích tự lên bản mới (kiểm SHA-256); Revit đang mở tự chuyển sang bản mới, không cần tắt.
+- **Cửa hàng tiện ích:** cài thêm bộ lệnh (vd Mô phỏng 4D) bằng một câu nói với AI.
 - Chạy trên máy bạn, không mở cổng mạng. Lệnh sửa mô hình Undo được. Revit **2025 trở lên**.
 
 ## Cài đặt
@@ -48,7 +52,7 @@ Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md
 AI client khác: khai báo MCP server kiểu **stdio**, command `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe`.
 Mở nhiều Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
 
-## Có những gì (85 lệnh)
+## Có những gì (100+ lệnh)
 
 | Nhóm | Ví dụ |
 |---|---|
@@ -99,7 +103,8 @@ Khung chat trong Revit ───────────────────
 | Thành phần | Vai trò |
 |---|---|
 | `src/InnoPro.Revit.Sdk` | Interface viết lệnh: `RevitCommandBase`, `Args`, `Table`, `Lookup`, `UnitConvert` |
-| `src/InnoPro.Revit.Addin` | Host trong Revit: ribbon tự sinh, form tự sinh, nạp lệnh nóng, cầu nối, khung chat |
+| `src/InnoPro.Revit.Loader` | Bộ nạp (InnoPro.Revit.Addin.dll): Revit nạp trực tiếp, tự nạp nóng lõi khi có bản mới |
+| `src/InnoPro.Revit.Addin` | Lõi (InnoPro.Revit.Core.dll): ribbon tự sinh, form tự sinh, nạp lệnh nóng, cầu nối, khung chat |
 | `src/InnoPro.Revit.Chat` | Module chat (nạp riêng): Claude qua SDK Anthropic, các AI khác qua API OpenAI-compatible |
 | `src/InnoPro.Bridge` | Giao thức named pipe, tra cứu lệnh dùng chung |
 | `src/InnoPro.Mcp.Server` | MCP server, công thức, lệnh `setup` cấu hình AI client |
