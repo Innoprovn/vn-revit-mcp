@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using InnoPro.Revit.Sdk;
@@ -26,7 +26,7 @@ internal static partial class Labels
             var at = head.IndexOf(joint, StringComparison.OrdinalIgnoreCase);
             if (at >= 8) { head = head[..at]; break; }
         }
-        return head.Length is > 0 and <= 38 ? head : Humanize(command.Name);
+        return head.Length is > 0 and <= 40 ? head : Humanize(command.Name);
     }
 
     /// <summary>Nhãn tham số: cụm đầu của mô tả ("Sai số vị trí, mặc định 5 mm." → "Sai số vị trí").</summary>

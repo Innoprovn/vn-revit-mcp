@@ -90,6 +90,15 @@ internal static class RibbonManager
             if (fresh.Count > 0)
             {
                 var (path, stubs) = GenerateStubs(fresh.Select(c => c.Name).ToList());
+                // Nhóm mới có lệnh nổi bật (ví dụ tiện ích vừa cài từ Cửa hàng): dựng panel riêng ngay, không chờ mở lại Revit.
+                foreach (var group in fresh.GroupBy(c => c.Ribbon?.Panel ?? c.Category)
+                             .Where(g => g.Any(c => c.Ribbon != null) && !Menus.ContainsKey(g.Key)))
+                {
+                    var panel = app.GetRibbonPanels(TabName).FirstOrDefault(p => p.Name == group.Key) ?? app.CreateRibbonPanel(TabName, group.Key);
+                    panel.Visible = true;
+                    AddFeatured(panel, group.Key, group.ToList(), path, stubs);
+                    fresh.RemoveAll(c => group.Contains(c));
+                }
                 foreach (var command in fresh)
                 {
                     var target = Menus.GetValueOrDefault(command.Category) ?? NewMenu;
@@ -120,18 +129,7 @@ internal static class RibbonManager
 
             // Nhóm có lệnh nổi bật: panel riêng gồm các nút nhỏ + menu "Tất cả".
             foreach (var group in groups.Where(g => g.Any(c => c.Ribbon != null)))
-            {
-                var featured = group.Where(c => c.Ribbon != null).OrderBy(c => c.Name).ToList();
-                var items = featured.Select(c => (RibbonItemData)Button($"InnoPro.Cmd.{c.Name}", Short(c.Ribbon!.Text), path, stubs[c.Name],
-                    Glyph(c), Tooltip(c))).ToList();
-                items.Add(MenuData(group.Key, "Tất cả"));
-                var created = AddCompact(panel(group.Key), items);
-
-                for (var i = 0; i < featured.Count; i++) Track(featured[i].Name, created[i]);
-                var menu = (PulldownButton)created[^1];
-                Menus[group.Key] = menu;
-                foreach (var c in group.OrderBy(Labels.MenuTitle)) Track(c.Name, menu.AddPushButton(MenuEntry(c, path, stubs[c.Name])));
-            }
+                AddFeatured(panel(group.Key), group.Key, group.ToList(), path, stubs);
 
             // Nhóm còn lại: mỗi nhóm một menu danh sách trong panel "Khác", kèm menu "Lệnh mới" cho lệnh thêm về sau.
             var rest = groups.Where(g => g.All(c => c.Ribbon == null)).ToList();
@@ -151,6 +149,21 @@ internal static class RibbonManager
         {
             Log.Error("Không dựng được ribbon", ex);
         }
+    }
+
+    /// <summary>Panel của một nhóm có lệnh nổi bật: các nút nhỏ + menu "Tất cả" liệt kê mọi lệnh của nhóm.</summary>
+    private static void AddFeatured(RibbonPanel panel, string key, List<IRevitCommand> group, string path, Dictionary<string, string> stubs)
+    {
+        var featured = group.Where(c => c.Ribbon != null).OrderBy(c => c.Name).ToList();
+        var items = featured.Select(c => (RibbonItemData)Button($"InnoPro.Cmd.{c.Name}", Short(c.Ribbon!.Text), path, stubs[c.Name],
+            Glyph(c), Tooltip(c))).ToList();
+        items.Add(MenuData(key, "Tất cả"));
+        var created = AddCompact(panel, items);
+
+        for (var i = 0; i < featured.Count; i++) Track(featured[i].Name, created[i]);
+        var menu = (PulldownButton)created[^1];
+        Menus[key] = menu;
+        foreach (var c in group.OrderBy(Labels.MenuTitle)) Track(c.Name, menu.AddPushButton(MenuEntry(c, path, stubs[c.Name])));
     }
 
     /// <summary>Thêm item thành cột 3 nút nhỏ xếp chồng; lẻ 1 thì thêm đơn.</summary>

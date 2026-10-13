@@ -50,7 +50,11 @@ foreach ($manifest in Get-ChildItem (Join-Path $root "src") -Recurse -Filter com
     Write-Host "CommandSet $name"
 }
 
-dotnet publish (Join-Path $root "src\InnoPro.Mcp.Server\InnoPro.Mcp.Server.csproj") -c $Configuration -r win-x64 --self-contained false -o (Join-Path $out "server")
+# Restore NuGet trên ổ mạng/ổ ảo đôi khi lỗi "file already exists": thử lại một lần.
+foreach ($try in 1..2) {
+    dotnet publish (Join-Path $root "src\InnoPro.Mcp.Server\InnoPro.Mcp.Server.csproj") -c $Configuration -r win-x64 --self-contained false --no-restore -o (Join-Path $out "server")
+    if ($LASTEXITCODE -eq 0) { break }
+}
 if ($LASTEXITCODE -ne 0) { throw "Publish MCP server thất bại." }
 
 Write-Host "Xong: $out" -ForegroundColor Green

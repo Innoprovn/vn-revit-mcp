@@ -51,7 +51,9 @@ internal static class ButtonRunner
 
             Log.Info($"Nút: chạy lệnh {name}");
             var result = CommandRunner.Execute(context, command, args);
-            ResultWindow.Show(uiApp, Labels.CommandTitle(command), JsonSerializer.SerializeToElement(result, BridgeProtocol.Json));
+            // Lệnh "*_open" tự mở cửa sổ của nó: không hiện thêm hộp kết quả.
+            if (!command.Name.EndsWith("_open", StringComparison.OrdinalIgnoreCase))
+                ResultWindow.Show(uiApp, Labels.CommandTitle(command), JsonSerializer.SerializeToElement(result, BridgeProtocol.Json));
             return Result.Succeeded;
         }
         catch (OperationCanceledException)
