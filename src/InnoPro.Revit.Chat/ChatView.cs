@@ -24,6 +24,7 @@ internal sealed class ChatView : UserControl
 
     private readonly IRevitHost _host;
     private readonly ChatEngine _engine;
+    private readonly ClaudeCodeRunner _claude = new();
     private readonly ChatSettings _settings;
 
     private readonly ComboBox _providerBox = new();
@@ -77,7 +78,7 @@ internal sealed class ChatView : UserControl
         var row = new DockPanel();
         foreach (var (icon, tip, action) in new (string, string, Action)[]
                  {
-                     ("plus", "Cuộc trò chuyện mới", () => { _engine.Reset(); _transcript.Children.Clear(); _status.Text = ""; ShowWelcome(); }),
+                     ("plus", "Cuộc trò chuyện mới", () => { _engine.Reset(); _claude.Reset(); _transcript.Children.Clear(); _status.Text = ""; ShowWelcome(); }),
                      ("key", "API key", EditKey),
                      ("reload", "Tải danh sách model", async () => await LoadModels()),
                  })
@@ -200,6 +201,17 @@ internal sealed class ChatView : UserControl
 
         var model = _modelBox.Text.Trim();
         _settings.Models[preset.Id] = model;
+        if (preset.IsClaudeCode)
+        {
+            TrySaveSettings();
+            _claude.Reset();
+            if (ClaudeCodeRunner.FindClaude() == null) { _status.Text = "Chưa có Claude Code trên máy"; ShowWelcome(); return; }
+            if (model.Length == 0) _modelBox.Text = model = "sonnet";
+            _providerReady = true;
+            _status.Text = $"Claude Code · {model}";
+            ShowWelcome();
+            return;
+        }
         if (preset.Id == "custom") _settings.BaseUrls[preset.Id] = _baseUrlBox.Text.Trim();
         TrySaveSettings();
 
@@ -243,6 +255,13 @@ internal sealed class ChatView : UserControl
     {
         var preset = Preset;
         if (preset.IsDesktop) return;
+        if (preset.IsClaudeCode)
+        {
+            _modelBox.Items.Clear();
+            foreach (var m in ClaudeCodeRunner.Models) _modelBox.Items.Add(m);
+            _modelBox.IsDropDownOpen = true;
+            return;
+        }
         var key = CredentialStore.Read(preset.Id);
         if (preset.NeedsKey && string.IsNullOrEmpty(key)) { _status.Text = "Cần API key"; return; }
         try
@@ -300,7 +319,7 @@ internal sealed class ChatView : UserControl
         SetBusy(true);
         try
         {
-            await _engine.RunAsync(text, (kind, content) => Dispatcher.Invoke(() =>
+            Action<string, string> show = (kind, content) => Dispatcher.Invoke(() =>
             {
                 switch (kind)
                 {
@@ -308,13 +327,16 @@ internal sealed class ChatView : UserControl
                     case "tool": AddLine("· " + content, Theme.Muted); break;
                     case "tool_error": AddLine("! " + content, Theme.Danger); break;
                 }
-            }), _running.Token);
+            });
+            if (Preset.IsClaudeCode) await _claude.RunAsync(text, _modelBox.Text.Trim(), show, _running.Token);
+            else await _engine.RunAsync(text, show, _running.Token);
             _status.Text = "";
         }
         catch (OperationCanceledException)
         {
             AddLine("Đã dừng.", Theme.Muted);
             _engine.Reset();
+            _claude.Reset();
         }
         catch (Exception ex)
         {

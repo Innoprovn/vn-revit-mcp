@@ -39,6 +39,7 @@ Xong: mở Revit, tab **InnoPro**. Dùng theo một trong ba cách:
 - **Chat trong Revit:** bấm **Chat AI**, chọn nhà cung cấp, nhập API key. Có Claude, OpenAI, Gemini, DeepSeek, Qwen, Kimi,
   GLM, MiniMax, OpenRouter, hoặc AI chạy trên máy (Ollama, LM Studio) không cần key.
 - **Tài khoản Claude (Free, Pro, Max):** trong khung chat chọn *Claude Desktop (Free/Pro/Max)* → *Kết nối và mở Claude*. Gói Free có hạn mức thấp, đủ để thử.
+- **Claude Code đã đăng nhập:** trong khung chat chọn *Claude Code (tài khoản đang đăng nhập)*, hỏi ngay trong Revit, không cần API key (dùng gói Claude của máy).
 - **AI bên ngoài** (Claude Desktop, Cursor, VS Code...): đã tự kết nối khi cài; khởi động lại ứng dụng AI rồi hỏi.
 
 Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md). Dựng hình từ CAD: [docs/dung-hinh-tu-cad.md](docs/dung-hinh-tu-cad.md).

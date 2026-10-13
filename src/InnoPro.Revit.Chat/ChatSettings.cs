@@ -12,6 +12,7 @@ internal sealed record ProviderPreset(string Id, string Name, string Kind, strin
 {
     public bool IsAnthropic => Kind == "anthropic";
     public bool IsDesktop => Kind == "desktop";
+    public bool IsClaudeCode => Kind == "claudecode";
     public bool Local => BaseUrl.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase);
 }
 
@@ -20,6 +21,7 @@ internal static class ProviderPresets
     // Hint: một dòng ngắn, chỉ nói lấy key ở đâu.
     public static readonly IReadOnlyList<ProviderPreset> All =
     [
+        new("claude-code", "Claude Code (tài khoản đang đăng nhập)", "claudecode", "", false, "sonnet", "Dùng Claude Code đã đăng nhập trên máy, không cần API key"),
         new("claude-desktop", "Claude Desktop (Free/Pro/Max)", "desktop", "", false, "", "Dùng tài khoản Claude (kể cả Free) qua ứng dụng Claude Desktop"),
         new("anthropic", "Claude API", "anthropic", "", true, "claude-opus-5-5", "Key: console.anthropic.com"),
         new("openai", "OpenAI", "openai", "https://api.openai.com/v1", true, "", "Key: platform.openai.com"),
