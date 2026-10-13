@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -72,7 +72,7 @@ namespace BIMTech4D
             Width = 1120; Height = 640; MinWidth = 820; MinHeight = 440;
             Background = Brushes.White;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            Title = "BIMTech 4D - " + doc.Title;
+            Title = "4D Simulation - " + doc.Title;
             _themed = Theme.TryApply(this);
 
             Content = BuildUi();
@@ -200,7 +200,7 @@ namespace BIMTech4D
             more.Click += (s, e) => { menu.PlacementTarget = more; menu.Placement = PlacementMode.Bottom; menu.IsOpen = true; };
             DockPanel.SetDock(more, Dock.Right);
             head.Children.Add(more);
-            var clear = Btn("Xoá tiến độ", ClearSchedule, "Xoá toàn bộ tiến độ trong model và các view BIMTech 4D");
+            var clear = Btn("Xoá tiến độ", ClearSchedule, "Xoá toàn bộ tiến độ trong model và các view 4D Simulation");
             clear.Foreground = new SolidColorBrush(Color.FromRgb(220, 38, 38));
             DockPanel.SetDock(clear, Dock.Right);
             head.Children.Add(clear);
@@ -455,7 +455,7 @@ namespace BIMTech4D
         {
             var sel = SelectedTasks.ToList();
             if (sel.Count == 0) return;
-            if (MessageBox.Show(this, $"Xoá {sel.Count} công việc?", "BIMTech 4D", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (MessageBox.Show(this, $"Xoá {sel.Count} công việc?", "4D Simulation", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             foreach (var t in sel) { t.PropertyChanged -= OnTaskChanged; _tasks.Remove(t); }
             RequestApply();
         }
@@ -485,7 +485,7 @@ namespace BIMTech4D
             };
             if (o.Mode == GroupMode.Parameter && string.IsNullOrEmpty(o.ParamName)) { Status("Chọn tham số dùng để chia."); return; }
             if (o.Mode == GroupMode.Filter && o.FilterIds.Count == 0) { Status("Tick ít nhất một filter."); return; }
-            if (_tasks.Count > 0 && MessageBox.Show(this, "Tạo mới sẽ thay toàn bộ tiến độ hiện tại. Tiếp tục?", "BIMTech 4D", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (_tasks.Count > 0 && MessageBox.Show(this, "Tạo mới sẽ thay toàn bộ tiến độ hiện tại. Tiếp tục?", "4D Simulation", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
 
             Status("Đang đọc model…");
             _bridge.Run(app =>
@@ -505,8 +505,8 @@ namespace BIMTech4D
         void ClearSchedule()
         {
             if (MessageBox.Show(this,
-                    "Xoá toàn bộ tiến độ đang lưu trong model, kèm view \"BIMTech 4D\" và \"BIMTech 4D Camera\"?\n\nCó thể Undo (Ctrl+Z) trong Revit nếu lỡ tay.",
-                    "BIMTech 4D", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+                    "Xoá toàn bộ tiến độ đang lưu trong model, kèm view \"4D Simulation\" và \"4D Simulation Camera\"?\n\nCó thể Undo (Ctrl+Z) trong Revit nếu lỡ tay.",
+                    "4D Simulation", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             StopPlay();
             var s = _simOn ? _session : null;
             _simOn = false;
@@ -517,7 +517,7 @@ namespace BIMTech4D
                 var u = UiDoc(app);
                 s?.Reset();
                 // đang đứng ở view sắp xoá thì chuyển sang view 3D khác trước
-                var names = new[] { SimSession.ViewName, SimSession.CameraViewName };
+                var names = new[] { SimSession.ViewName, SimSession.CameraViewName, SimSession.LegacyViewName, SimSession.LegacyCameraViewName };
                 if (names.Contains(u.ActiveView.Name))
                 {
                     var other = new DB.FilteredElementCollector(Doc).OfClass(typeof(DB.View3D)).Cast<DB.View3D>()
@@ -580,7 +580,7 @@ namespace BIMTech4D
             try
             {
                 var list = Csv.Import(dlg.FileName);
-                if (_tasks.Count > 0 && MessageBox.Show(this, $"Thay tiến độ hiện tại bằng {list.Count} công việc trong file?", "BIMTech 4D", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                if (_tasks.Count > 0 && MessageBox.Show(this, $"Thay tiến độ hiện tại bằng {list.Count} công việc trong file?", "4D Simulation", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
                 ReplaceTasks(list);
                 _changed = true;
                 Status($"Đã nhập {list.Count} công việc từ {Path.GetFileName(dlg.FileName)}.");
@@ -673,7 +673,7 @@ namespace BIMTech4D
                 catch (Exception ex)
                 {
                     StopPlay();
-                    Dispatcher.BeginInvoke(new Action(() => MessageBox.Show(this, ex.Message, "BIMTech 4D", MessageBoxButton.OK, MessageBoxImage.Warning)));
+                    Dispatcher.BeginInvoke(new Action(() => MessageBox.Show(this, ex.Message, "4D Simulation", MessageBoxButton.OK, MessageBoxImage.Warning)));
                 }
                 finally
                 {
@@ -682,7 +682,7 @@ namespace BIMTech4D
             });
         }
 
-        /// <summary>Bật mô phỏng nếu chưa bật (tạo/mở view 3D "BIMTech 4D").</summary>
+        /// <summary>Bật mô phỏng nếu chưa bật (tạo/mở view 3D "4D Simulation").</summary>
         void EnsureSim()
         {
             if (_simOn || _busy) return;
@@ -750,7 +750,7 @@ namespace BIMTech4D
             if (_btnPlay?.Content is TextBlock tb) { tb.Text = playing ? IconPause : IconPlay; tb.Margin = new Thickness(playing ? 0 : 2, 0, 0, 0); }
         }
 
-        /// <summary>Bật/tắt camera bay quanh: đổi sang view phối cảnh "BIMTech 4D Camera" hoặc về view thường.</summary>
+        /// <summary>Bật/tắt camera bay quanh: đổi sang view phối cảnh "4D Simulation Camera" hoặc về view thường.</summary>
         void CameraToggled()
         {
             bool cam = _ckCamera.IsChecked == true;

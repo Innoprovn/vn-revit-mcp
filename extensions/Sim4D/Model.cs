@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -114,7 +114,7 @@ namespace BIMTech4D
             foreach (View3D v in new FilteredElementCollector(doc).OfClass(typeof(View3D)))
                 if (!v.IsTemplate && names.Contains(v.Name)) { ids.Add(v.Id); views++; }
             if (ids.Count == 0) return 0;
-            using var t = new Transaction(doc, "BIMTech 4D - Xoá tiến độ");
+            using var t = new Transaction(doc, "4D Simulation - Xoá tiến độ");
             t.Start();
             doc.Delete(ids);
             t.Commit();
@@ -125,7 +125,7 @@ namespace BIMTech4D
         {
             var json = JsonSerializer.Serialize(new Payload { Tasks = tasks.ToList() });
             var schema = GetOrCreateSchema();
-            using var t = new Transaction(doc, "BIMTech 4D - Lưu tiến độ");
+            using var t = new Transaction(doc, "4D Simulation - Lưu tiến độ");
             t.Start();
             var ds = FindStorage(doc, schema) ?? DataStorage.Create(doc);
             var ent = new Entity(schema);

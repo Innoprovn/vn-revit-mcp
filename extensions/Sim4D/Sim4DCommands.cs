@@ -193,7 +193,7 @@ namespace BIMTech4D
         public override string Category => Sim4D.Category;
         public override TransactionMode TransactionMode => TransactionMode.Manual;
         public override string Description =>
-            "Hiển thị mô hình tại một ngày theo tiến độ 4D trong view 3D \"BIMTech 4D\": đã xong hiện bình thường, đang làm tô màu, chưa làm ẩn. " +
+            "Hiển thị mô hình tại một ngày theo tiến độ 4D trong view 3D \"4D Simulation\": đã xong hiện bình thường, đang làm tô màu, chưa làm ẩn. " +
             "reset=true trả view về bình thường.";
         public override string InputSchema => """
             {

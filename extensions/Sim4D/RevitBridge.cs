@@ -23,10 +23,10 @@ namespace BIMTech4D
             while (_q.TryDequeue(out var a))
             {
                 try { a(app); }
-                catch (Exception ex) { TaskDialog.Show("BIMTech 4D", ex.Message); }
+                catch (Exception ex) { TaskDialog.Show("4D Simulation", ex.Message); }
             }
         }
 
-        public string GetName() => "BIMTech 4D";
+        public string GetName() => "4D Simulation";
     }
 }

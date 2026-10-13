@@ -53,8 +53,11 @@ namespace BIMTech4D
     /// <summary>Phiên mô phỏng trên một view 3D riêng. Chỉ gọi trong ngữ cảnh Revit API.</summary>
     public class SimSession
     {
-        public const string ViewName = "BIMTech 4D";
-        public const string CameraViewName = "BIMTech 4D Camera";
+        public const string ViewName = "4D Simulation";
+        public const string CameraViewName = "4D Simulation Camera";
+        // Tên view của bản cũ (trước 1.0.4), để nhận lại view có sẵn trong mô hình.
+        public const string LegacyViewName = "BIMTech 4D";
+        public const string LegacyCameraViewName = "BIMTech 4D Camera";
         const double PitchDeg = 22;
 
         public Document Doc { get; private set; }
@@ -72,12 +75,19 @@ namespace BIMTech4D
             var doc = uidoc.Document;
             var s = new SimSession { Doc = doc, IsCamera = camera };
             string name = camera ? CameraViewName : ViewName;
-            var view = new FilteredElementCollector(doc).OfClass(typeof(View3D)).Cast<View3D>()
-                .FirstOrDefault(v => !v.IsTemplate && v.Name == name);
+            var views = new FilteredElementCollector(doc).OfClass(typeof(View3D)).Cast<View3D>().Where(v => !v.IsTemplate).ToList();
+            var view = views.FirstOrDefault(v => v.Name == name);
+            // Mô hình làm bằng bản cũ có view tên "BIMTech 4D": dùng lại và đổi sang tên mới.
+            var legacy = view == null ? views.FirstOrDefault(v => v.Name == (camera ? LegacyCameraViewName : LegacyViewName)) : null;
 
-            using (var t = new Transaction(doc, "BIMTech 4D - Chuẩn bị view"))
+            using (var t = new Transaction(doc, "4D Simulation - Chuẩn bị view"))
             {
                 t.Start();
+                if (legacy != null)
+                {
+                    try { legacy.Name = name; } catch { /* trùng tên: giữ tên cũ */ }
+                    view = legacy;
+                }
                 if (view == null)
                 {
                     var vft = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType)).Cast<ViewFamilyType>()
@@ -217,7 +227,7 @@ namespace BIMTech4D
             bool cam = shot != null && IsCamera;
             if (hide.Count + unhide.Count + ov.Count + clear.Count == 0 && !cam) return;
 
-            using var t = new Transaction(Doc, "BIMTech 4D");
+            using var t = new Transaction(Doc, "4D Simulation");
             t.Start();
             if (unhide.Count > 0) View.UnhideElements(unhide);
             if (hide.Count > 0) View.HideElements(hide);
@@ -263,7 +273,7 @@ namespace BIMTech4D
         {
             if (View == null || !View.IsValidObject || !Doc.IsValidObject) return;
             var blank = new OverrideGraphicSettings();
-            using var t = new Transaction(Doc, "BIMTech 4D - Kết thúc mô phỏng");
+            using var t = new Transaction(Doc, "4D Simulation - Kết thúc mô phỏng");
             t.Start();
             var unhide = new List<ElementId>();
             foreach (var kv in _applied)
