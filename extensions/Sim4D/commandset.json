@@ -1,0 +1,1 @@
+﻿{ "name": "Mô phỏng 4D", "description": "Tiến độ gắn phần tử, Gantt, tô màu mô hình theo ngày.", "author": "InnoPro", "assemblies": ["InnoPro.Sim4D.dll"] }

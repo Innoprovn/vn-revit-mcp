@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.Loader;
 using System.Text.Json;
 using Autodesk.Revit.DB;
@@ -35,6 +35,10 @@ internal sealed class CommandRegistry
     public static CommandRegistry Load(IEnumerable<string> commandSetRoots, IEnumerable<string> scriptRoots)
     {
         var registry = new CommandRegistry();
+        // Lệnh dựng sẵn trong add-in (marketplace...): luôn có, không phụ thuộc CommandSet nào.
+        foreach (var builtin in Marketplace.Commands)
+            registry.Register(builtin, "Hệ thống", "add-in");
+
         foreach (var root in commandSetRoots.Where(Directory.Exists))
         foreach (var dir in Directory.GetDirectories(root))
             registry.LoadSet(dir);
