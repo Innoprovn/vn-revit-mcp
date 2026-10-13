@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -81,7 +81,9 @@ namespace BIMTech4D
             {
                 var c = e.Category;
                 if (c == null || c.CategoryType != CategoryType.Model || Excluded.Contains(c.Id.Value)) continue;
-                if (e is RevitLinkInstance || e is ImportInstance) continue;
+                if (e is RevitLinkInstance || e is ImportInstance || e is View) continue;
+                // Bỏ nét phác thảo, chú giải, vật liệu..., khối Mass ý tưởng: không phải cấu kiện thi công.
+                if (!InnoPro.Revit.Sdk.ElementInfo.IsPhysical(e) || c.BuiltInCategory == BuiltInCategory.OST_Mass) continue;
                 if (e is FamilyInstance fi && fi.SuperComponent != null) continue;
                 if (e.get_BoundingBox(null) == null) continue;
                 list.Add(e);
