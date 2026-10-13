@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
@@ -104,7 +104,12 @@ namespace BIMTech4D
                 t.Commit();
             }
 
-            if (uidoc.ActiveView.Id != view.Id) uidoc.ActiveView = view;
+            if (uidoc.ActiveView.Id != view.Id)
+            {
+                // Gọi từ lệnh AI (trong ExternalEvent) có lúc Revit khoá việc đổi view: gửi yêu cầu, Revit đổi khi rảnh.
+                try { uidoc.ActiveView = view; }
+                catch (Autodesk.Revit.Exceptions.InvalidOperationException) { uidoc.RequestViewChange(view); }
+            }
             s.View = view;
             s.BuildOverrides();
             s.MeasureBounds(ids);
