@@ -1,37 +1,57 @@
 {
-  "version": 1,
-  "commands": [
-    {
-      "id": "count_by_level",
-      "file": "scripts/DemCauKienTheoTang.cs",
-      "title": "Đếm cấu kiện theo tầng",
-      "description": "Đếm số cấu kiện của một category theo từng tầng.",
-      "category": "Truy vấn",
-      "author": "InnoPro"
-    },
-    {
-      "id": "new_project",
-      "file": "scripts/TaoDuAnMoi.cs",
-      "title": "Tạo dự án mới",
-      "description": "Tạo dự án Revit mới từ template, lưu ra file rồi mở.",
-      "category": "Tài liệu",
-      "author": "InnoPro"
-    },
-    {
-      "id": "copy_parameter_values",
-      "file": "scripts/ChepThamSo.cs",
-      "title": "Chép giá trị tham số",
-      "description": "Chép giá trị từ tham số nguồn sang tham số đích trên các phần tử đang chọn (ví dụ Mark sang Comments).",
-      "category": "Tham số",
-      "author": "InnoPro"
-    },
-    {
-      "id": "check_rooms",
-      "file": "scripts/KiemTraPhong.cs",
-      "title": "Kiểm tra phòng lỗi",
-      "description": "Tìm phòng chưa đặt, không khép kín, trùng số phòng.",
-      "category": "QA-QC",
-      "author": "InnoPro"
-    }
-  ]
+    "version":  1,
+    "commands":  [
+                     {
+                         "id":  "count_by_level",
+                         "file":  "scripts/DemCauKienTheoTang.cs",
+                         "title":  "Đếm cấu kiện theo tầng",
+                         "description":  "Đếm số cấu kiện của một category theo từng tầng.",
+                         "category":  "Truy vấn",
+                         "author":  "InnoPro"
+                     },
+                     {
+                         "id":  "new_project",
+                         "file":  "scripts/TaoDuAnMoi.cs",
+                         "title":  "Tạo dự án mới",
+                         "description":  "Tạo dự án Revit mới từ template, lưu ra file rồi mở.",
+                         "category":  "Tài liệu",
+                         "author":  "InnoPro"
+                     },
+                     {
+                         "id":  "copy_parameter_values",
+                         "file":  "scripts/ChepThamSo.cs",
+                         "title":  "Chép giá trị tham số",
+                         "description":  "Chép giá trị từ tham số nguồn sang tham số đích trên các phần tử đang chọn (ví dụ Mark sang Comments).",
+                         "category":  "Tham số",
+                         "author":  "InnoPro"
+                     },
+                     {
+                         "id":  "check_rooms",
+                         "file":  "scripts/KiemTraPhong.cs",
+                         "title":  "Kiểm tra phòng lỗi",
+                         "description":  "Tìm phòng chưa đặt, không khép kín, trùng số phòng.",
+                         "category":  "QA-QC",
+                         "author":  "InnoPro"
+                     }
+                 ],
+    "extensions":  [
+                       {
+                           "id":  "sim4d",
+                           "name":  "Mô phỏng 4D",
+                           "description":  "Tiến độ gắn phần tử, Gantt, chạy mô phỏng theo ngày ngay trong Revit; AI tự sinh tiến độ và hiển thị mô hình tại một ngày.",
+                           "category":  "Mô phỏng",
+                           "author":  "InnoPro",
+                           "version":  "1.0.0",
+                           "url":  "https://github.com/Innoprovn/vn-revit-mcp/releases/download/ext-sim4d-v1.0.0/sim4d-1.0.0.zip",
+                           "sha256":  "8e92b583b82154804a7704af505f86c72552a7ab2281978cef2fe879cb57fabb",
+                           "size_kb":  45,
+                           "commands":  [
+                                            "sim4d_open",
+                                            "sim4d_tasks",
+                                            "sim4d_set_tasks",
+                                            "sim4d_generate",
+                                            "sim4d_show"
+                                        ]
+                       }
+                   ]
 }
