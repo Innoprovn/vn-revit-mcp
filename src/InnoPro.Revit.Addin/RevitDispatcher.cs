@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Autodesk.Revit.UI;
 
 namespace InnoPro.Revit.Addin;
@@ -7,7 +7,7 @@ namespace InnoPro.Revit.Addin;
 /// Revit API chỉ được gọi trên luồng chính. Lệnh từ cầu nối được xếp hàng ở đây
 /// và chạy khi Revit rảnh, thông qua ExternalEvent.
 /// </summary>
-internal sealed class RevitDispatcher : IExternalEventHandler
+internal sealed class RevitDispatcher : IExternalEventHandler, IDisposable
 {
     private sealed record WorkItem(Func<UIApplication, string> Work, TaskCompletionSource<string> Completion, CancellationToken Token);
 
@@ -54,6 +54,14 @@ internal sealed class RevitDispatcher : IExternalEventHandler
     }
 
     public bool HasPending => !_queue.IsEmpty;
+
+    /// <summary>Đổi lõi: việc còn trong hàng đợi báo lỗi để phía gọi thử lại với lõi mới.</summary>
+    public void Dispose()
+    {
+        while (_queue.TryDequeue(out var item))
+            item.Completion.TrySetException(new InvalidOperationException("Revit đang nạp bản mới của add-in, thử lại sau vài giây."));
+        _event.Dispose();
+    }
 
     public string GetName() => "InnoPro vn-revit-mcp";
 }

@@ -20,6 +20,15 @@ internal static class ButtonRunner
 
     private static Result Run(string name, ExternalCommandData data)
     {
+        // Nút hệ thống (Chat AI, Cửa hàng, Hệ thống...): lớp IExternalCommand cùng tên trong lõi đang chạy.
+        if (name.StartsWith('@'))
+        {
+            var type = typeof(ButtonRunner).Assembly.GetType($"InnoPro.Revit.Addin.{name[1..]}");
+            if (type == null || Activator.CreateInstance(type) is not IExternalCommand system) return Result.Failed;
+            var message = "";
+            return system.Execute(data, ref message, new Autodesk.Revit.DB.ElementSet());
+        }
+
         var app = App.Instance;
         if (app == null || !app.Registry.TryGet(name, out var loaded))
         {

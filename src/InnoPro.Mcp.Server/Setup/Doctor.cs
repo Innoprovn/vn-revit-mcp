@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -94,7 +94,7 @@ internal static class Doctor
                     && Version.TryParse(FileVersionInfo.GetVersionInfo(addinDll).FileVersion, out var installedNow) && running < installedNow)
                     checks.Add(new Check($"addin_outdated_{pid}", false,
                         $"Revit PID {pid} đang chạy add-in {running.ToString(3)}, bản đã cài là {installedNow.ToString(3)}.",
-                        "NGƯỜI DÙNG: đóng rồi mở lại Revit để dùng bản mới (AI không tự làm)."));
+                        running >= new Version(0, 7) ? "Add-in tự nạp bản mới khi Revit rảnh (vài giây); kiểm tra lại sau." : "NGƯỜI DÙNG: đóng rồi mở lại Revit một lần (từ 0.7.0 trở đi add-in tự nạp bản mới, không cần mở lại)."));
                 checks.Add(new Check($"bridge_{pid}", errors == 0,
                     $"{r.GetProperty("revit_version").GetString()}, add-in {r.GetProperty("addin_version").GetString()}, " +
                     $"{r.GetProperty("command_count").GetInt32()} lệnh, tài liệu: {active ?? "chưa mở"}" + (errors > 0 ? $", {errors} lỗi nạp lệnh" : ""),

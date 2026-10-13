@@ -289,7 +289,8 @@ $scriptFile = $PSCommandPath
 try {
     if ($scriptFile -and -not $env:VN_REVIT_MCP_OUTSIDE -and (Test-InPackage)) {
         $forward = @()
-        if ($Source) { $forward += "-Source", $Source }
+        # Chạy qua Explorer thì thư mục làm việc khác: đổi đường dẫn tương đối thành tuyệt đối.
+        if ($Source) { $forward += "-Source", $(if (Test-Path $Source) { (Resolve-Path $Source).Path } else { $Source }) }
         if ($Version) { $forward += "-Version", $Version }
         if ($NoClients) { $forward += "-NoClients" }
         $ok = Invoke-Outside $scriptFile $forward

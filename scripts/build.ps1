@@ -22,9 +22,14 @@ $addin = Join-Path $out "addin\InnoPro.VnRevitMcp"
 New-Item -ItemType Directory -Force $addin | Out-Null
 
 $addinBin = Join-Path $root "src\InnoPro.Revit.Addin\bin\$Configuration\net8.0-windows"
-# Gồm cả Roslyn (Microsoft.CodeAnalysis*.dll) để biên dịch file lệnh .cs và nút ribbon.
-Copy-Item (Join-Path $addinBin "*.dll"), (Join-Path $addinBin "InnoPro.*.pdb") $addin
+# Lõi (InnoPro.Revit.Core) cùng SDK, Bridge, Roslyn (biên dịch file lệnh .cs và nút ribbon).
+# Bỏ InnoPro.Revit.Addin.* cũ còn sót trong bin (trước 0.7.0 lõi mang tên này).
+Get-ChildItem $addinBin -File | Where-Object { ($_.Extension -eq ".dll" -or $_.Name -like "InnoPro.*.pdb") -and $_.Name -notlike "InnoPro.Revit.Addin.*" } |
+    Copy-Item -Destination $addin
 Copy-Item (Join-Path $addinBin "InnoPro.VnRevitMcp.addin") (Join-Path $out "addin")
+# Bộ nạp: DLL duy nhất Revit nạp trực tiếp (giữ tên InnoPro.Revit.Addin.dll), tự nạp nóng lõi khi có bản mới.
+$loaderBin = Join-Path $root "src\InnoPro.Revit.Loader\bin\$Configuration\net8.0-windows"
+Copy-Item (Join-Path $loaderBin "InnoPro.Revit.Addin.dll"), (Join-Path $loaderBin "InnoPro.Revit.Addin.pdb") $addin
 
 # Module chat: nạp trong AssemblyLoadContext riêng (thư viện riêng, ví dụ SDK Anthropic và System.Text.Json mới hơn).
 $chatBin = Join-Path $root "src\InnoPro.Revit.Chat\bin\$Configuration\net8.0-windows"

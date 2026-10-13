@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWPF>true</UseWPF>
+    <!-- Giữ tên DLL và lớp App cũ: file .addin và bộ cài không phải đổi. -->
+    <AssemblyName>InnoPro.Revit.Addin</AssemblyName>
+    <RootNamespace>InnoPro.Revit.Addin</RootNamespace>
+    <Description>Bộ nạp add-in vn-revit-mcp: nạp phần lõi (InnoPro.Revit.Core) và nạp nóng bản mới khi Revit đang chạy.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitApiVersion)" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+</Project>

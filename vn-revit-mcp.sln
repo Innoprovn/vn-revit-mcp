@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoPro.Revit.Commands.Docs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoPro.Revit.Commands.RevitUi", "src\InnoPro.Revit.Commands.RevitUi\InnoPro.Revit.Commands.RevitUi.csproj", "{0971E695-68CC-43C9-9011-35B60E987230}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnoPro.Revit.Loader", "src\InnoPro.Revit.Loader\InnoPro.Revit.Loader.csproj", "{6D26EB56-0C26-4259-8A88-A763C60F7D60}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -211,6 +213,18 @@ Global
 		{0971E695-68CC-43C9-9011-35B60E987230}.Release|x64.Build.0 = Release|Any CPU
 		{0971E695-68CC-43C9-9011-35B60E987230}.Release|x86.ActiveCfg = Release|Any CPU
 		{0971E695-68CC-43C9-9011-35B60E987230}.Release|x86.Build.0 = Release|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Debug|x64.Build.0 = Debug|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Debug|x86.Build.0 = Debug|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Release|x64.ActiveCfg = Release|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Release|x64.Build.0 = Release|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Release|x86.ActiveCfg = Release|Any CPU
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -230,5 +244,6 @@ Global
 		{A35523FE-F947-482D-9894-E2F0FB6E32F0} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F0519201-74C1-4E7E-AA36-4399AEF3BE4E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{0971E695-68CC-43C9-9011-35B60E987230} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{6D26EB56-0C26-4259-8A88-A763C60F7D60} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

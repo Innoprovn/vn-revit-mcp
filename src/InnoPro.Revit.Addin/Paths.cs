@@ -1,9 +1,12 @@
-namespace InnoPro.Revit.Addin;
+﻿namespace InnoPro.Revit.Addin;
 
 internal static class Paths
 {
-    /// <summary>Thư mục chứa InnoPro.Revit.Addin.dll.</summary>
-    public static string AddinDir { get; } = Path.GetDirectoryName(typeof(Paths).Assembly.Location)!;
+    /// <summary>
+    /// Thư mục bản cài của add-in (currentddin): CommandSet, module chat, server. Bộ nạp truyền vào khi chạy lõi,
+    /// vì bản thân lõi chạy từ bản sao trong cache\core.
+    /// </summary>
+    public static string AddinDir { get; set; } = Path.GetDirectoryName(typeof(Paths).Assembly.Location)!;
 
     /// <summary>CommandSet đi kèm bộ cài.</summary>
     public static string BundledCommandsDir => Path.Combine(AddinDir, "Commands");

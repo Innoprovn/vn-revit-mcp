@@ -10,7 +10,7 @@ namespace InnoPro.Mcp.Server;
 /// <summary>
 /// Tự cập nhật: MCP server kiểm tra GitHub (tối đa 12 giờ/lần, chạy nền, không chặn AI).
 /// - Bản vn-revit-mcp mới: tải zip, kiểm SHA-256 do GitHub công bố, chạy bộ cài trong gói (-NoClients; bộ cài tự xử lý
-///   Revit đang mở và ứng dụng MSIX). Add-in có hiệu lực khi mở lại Revit; server mới dùng từ lần AI client mở lại.
+///   Revit đang mở và ứng dụng MSIX). Revit đang mở tự nạp add-in mới (bộ nạp); server mới dùng từ lần AI client mở lại.
 /// - Tiện ích marketplace đã cài có bản mới: tải, kiểm SHA-256, thay thư mục, nhờ Revit đang mở nạp lại ngay.
 /// Kết quả ghi update.json; lần gọi tool kế tiếp kèm một dòng thông báo cho AI. Tắt: VN_REVIT_MCP_AUTO_UPDATE=0.
 /// </summary>
@@ -109,7 +109,7 @@ public static class SelfUpdater
         if (process.ExitCode != 0) throw new InvalidOperationException("Bộ cài báo lỗi: " + output.Trim().Split('\n').LastOrDefault());
         try { Directory.Delete(work, true); } catch (IOException) { }
         state["installed"] = latest.ToString(3);
-        return $"bản {installed.ToString(3)} → {latest.ToString(3)} (add-in có hiệu lực khi mở lại Revit, server mới khi mở lại ứng dụng AI).";
+        return $"bản {installed.ToString(3)} → {latest.ToString(3)} (Revit đang mở tự nạp add-in mới khi rảnh; server mới dùng từ lần mở lại ứng dụng AI).";
     }
 
     private static async Task<List<string>> UpdateExtensionsAsync()

@@ -1,4 +1,4 @@
-﻿# vn-revit-mcp
+# vn-revit-mcp
 
 **Cho AI làm việc với Autodesk Revit.** Mã nguồn mở, miễn phí, do [InnoPro](https://innopro.vn) phát triển.
 
@@ -117,7 +117,7 @@ powershell -ExecutionPolicy Bypass -File scripts\dev-reload.ps1    # sửa Comma
 powershell -ExecutionPolicy Bypass -File scripts\package.ps1       # đóng gói artifacts\release\*.zip
 ```
 
-Chỉ khi sửa phần lõi (Addin, Sdk, Bridge) mới cần chạy lại `install-dev.ps1` rồi mở lại Revit.
+Lõi, SDK, Bridge, module chat cũng được nạp nóng (bộ nạp tự đổi lõi khi Revit rảnh). Chỉ khi sửa bộ nạp (`InnoPro.Revit.Loader`) mới cần chạy `install-dev.ps1` rồi mở lại Revit.
 
 ## Lộ trình
 

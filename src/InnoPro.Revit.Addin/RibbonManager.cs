@@ -24,28 +24,58 @@ internal static class RibbonManager
     private const string OtherPanel = "Khác";
 
     private static readonly Color Brand = Color.FromRgb(0x0B, 0x5C, 0xAD);
-    private static readonly Dictionary<string, List<RibbonItem>> Items = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, PulldownButton> Menus = new(StringComparer.OrdinalIgnoreCase);
-    private static PulldownButton? _newMenu;
-
-    public static void Initialize(UIControlledApplication app, CommandRegistry registry)
+    // Nút ribbon không xóa được và sống suốt phiên Revit, còn lõi có thể được nạp nóng nhiều lần: trạng thái ribbon
+    // giữ trong AppDomain bằng kiểu chung của .NET và Revit API để lõi mới nhận lại được.
+    private const string StateKey = "InnoPro.VnRevitMcp.Ribbon";
+    private static Dictionary<string, object?> State =>
+        AppDomain.CurrentDomain.GetData(StateKey) as Dictionary<string, object?> ?? throw new InvalidOperationException("Ribbon chưa dựng.");
+    private static Dictionary<string, List<RibbonItem>> Items => (Dictionary<string, List<RibbonItem>>)State["items"]!;
+    private static Dictionary<string, PulldownButton> Menus => (Dictionary<string, PulldownButton>)State["menus"]!;
+    private static PulldownButton? NewMenu
     {
+        get => State["new_menu"] as PulldownButton;
+        set => State["new_menu"] = value;
+    }
+
+    /// <summary>Nút hệ thống: ButtonRunner chạy lớp IExternalCommand cùng tên trong lõi đang chạy (tên có tiền tố "@").</summary>
+    private static readonly (string Id, string Text, Type Command, string Glyph, string Tooltip)[] SystemButtons =
+    [
+        ("InnoPro.Mcp.Chat", "Chat AI", typeof(ShowChatCommand), "chat", "Chat với AI ngay trong Revit"),
+        ("InnoPro.Mcp.Store", "Cửa hàng", typeof(StoreCommand), "store", "Cài lệnh do cộng đồng đóng góp"),
+        ("InnoPro.Mcp.Commands", "Danh sách lệnh", typeof(ShowCommandsCommand), "list", "Lệnh đang có và lỗi nạp lệnh"),
+        ("InnoPro.Mcp.Connect", "Kết nối AI", typeof(ConnectAiCommand), "connect", "Nối Claude, Cursor, VS Code... với Revit"),
+        ("InnoPro.Mcp.Reload", "Nạp lại lệnh", typeof(ReloadCommandsCommand), "reload", "Nạp lại lệnh, không cần mở lại Revit"),
+        ("InnoPro.Mcp.Toggle", "Bật/Tắt MCP", typeof(ToggleBridgeCommand), "power", "Cho phép hoặc chặn AI điều khiển Revit"),
+        ("InnoPro.Mcp.Update", "Cập nhật", typeof(UpdateCommand), "update", "Kiểm tra bản mới"),
+    ];
+
+    public static void Initialize(UIApplication app, CommandRegistry registry)
+    {
+        // Lõi được nạp nóng: ribbon đã có, chỉ bổ sung nút cho lệnh mới.
+        if (AppDomain.CurrentDomain.GetData(StateKey) is Dictionary<string, object?>)
+        {
+            Sync(app, registry);
+            return;
+        }
+        AppDomain.CurrentDomain.SetData(StateKey, new Dictionary<string, object?>
+        {
+            ["items"] = new Dictionary<string, List<RibbonItem>>(StringComparer.OrdinalIgnoreCase),
+            ["menus"] = new Dictionary<string, PulldownButton>(StringComparer.OrdinalIgnoreCase),
+            ["new_menu"] = null,
+        });
+
         try { app.CreateRibbonTab(TabName); }
         catch (Autodesk.Revit.Exceptions.ArgumentException) { } // tab đã có (add-in InnoPro khác tạo)
 
-        var assembly = typeof(RibbonManager).Assembly.Location;
+        var (assembly, classes) = GenerateStubs(SystemButtons.Select(b => "@" + b.Command.Name).ToList());
+        PushButtonData SystemButton(int i) => Button(SystemButtons[i].Id, SystemButtons[i].Text, assembly,
+            classes["@" + SystemButtons[i].Command.Name], SystemButtons[i].Glyph, SystemButtons[i].Tooltip);
+
         var ai = app.CreateRibbonPanel(TabName, AiPanel);
         var system = new PulldownButtonData("InnoPro.System", "Hệ thống") { ToolTip = "Lệnh, kết nối AI, cập nhật", Image = Icon("settings", 16), LargeImage = Icon("settings", 32) };
-        var stacked = ai.AddStackedItems(
-            Button("InnoPro.Mcp.Chat", "Chat AI", assembly, typeof(ShowChatCommand).FullName!, "chat", "Chat với AI ngay trong Revit"),
-            Button("InnoPro.Mcp.Store", "Cửa hàng", assembly, typeof(StoreCommand).FullName!, "store", "Cài lệnh do cộng đồng đóng góp"),
-            system);
+        var stacked = ai.AddStackedItems(SystemButton(0), SystemButton(1), system);
         var menu = (PulldownButton)stacked[2];
-        menu.AddPushButton(Button("InnoPro.Mcp.Commands", "Danh sách lệnh", assembly, typeof(ShowCommandsCommand).FullName!, "list", "Lệnh đang có và lỗi nạp lệnh"));
-        menu.AddPushButton(Button("InnoPro.Mcp.Connect", "Kết nối AI", assembly, typeof(ConnectAiCommand).FullName!, "connect", "Nối Claude, Cursor, VS Code... với Revit"));
-        menu.AddPushButton(Button("InnoPro.Mcp.Reload", "Nạp lại lệnh", assembly, typeof(ReloadCommandsCommand).FullName!, "reload", "Nạp lại lệnh, không cần mở lại Revit"));
-        menu.AddPushButton(Button("InnoPro.Mcp.Toggle", "Bật/Tắt MCP", assembly, typeof(ToggleBridgeCommand).FullName!, "power", "Cho phép hoặc chặn AI điều khiển Revit"));
-        menu.AddPushButton(Button("InnoPro.Mcp.Update", "Cập nhật", assembly, typeof(UpdateCommand).FullName!, "update", "Kiểm tra bản mới"));
+        for (var i = 2; i < SystemButtons.Length; i++) menu.AddPushButton(SystemButton(i));
 
         Build(registry, name => app.GetRibbonPanels(TabName).FirstOrDefault(p => p.Name == name) ?? app.CreateRibbonPanel(TabName, name));
     }
@@ -59,10 +89,10 @@ internal static class RibbonManager
             var fresh = commands.Where(c => !Items.ContainsKey(c.Name)).ToList();
             if (fresh.Count > 0)
             {
-                var (path, stubs) = GenerateStubs(fresh);
+                var (path, stubs) = GenerateStubs(fresh.Select(c => c.Name).ToList());
                 foreach (var command in fresh)
                 {
-                    var target = Menus.GetValueOrDefault(command.Category) ?? _newMenu;
+                    var target = Menus.GetValueOrDefault(command.Category) ?? NewMenu;
                     if (target == null) continue;
                     target.Visible = true;
                     Track(command.Name, target.AddPushButton(MenuEntry(command, path, stubs[command.Name])));
@@ -85,7 +115,7 @@ internal static class RibbonManager
         try
         {
             var commands = registry.Commands.Select(c => c.Command).ToList();
-            var (path, stubs) = commands.Count == 0 ? ("", new Dictionary<string, string>()) : GenerateStubs(commands);
+            var (path, stubs) = commands.Count == 0 ? ("", new Dictionary<string, string>()) : GenerateStubs(commands.Select(c => c.Name).ToList());
             var groups = commands.GroupBy(c => c.Ribbon?.Panel ?? c.Category).OrderBy(g => g.Key).ToList();
 
             // Nhóm có lệnh nổi bật: panel riêng gồm các nút nhỏ + menu "Tất cả".
@@ -114,8 +144,8 @@ internal static class RibbonManager
                 Menus[rest[i].Key] = m;
                 foreach (var c in rest[i].OrderBy(Labels.MenuTitle)) Track(c.Name, m.AddPushButton(MenuEntry(c, path, stubs[c.Name])));
             }
-            _newMenu = (PulldownButton)menus[^1];
-            _newMenu.Visible = false;
+            NewMenu = (PulldownButton)menus[^1];
+            NewMenu.Visible = false;
         }
         catch (Exception ex)
         {
@@ -178,14 +208,14 @@ internal static class RibbonManager
     /// mỗi lớp chỉ gọi ButtonRunner qua delegate đặt trong AppDomain.
     /// Tên assembly khác nhau cho mỗi bộ nút: Revit nạp theo tên, trùng tên sẽ lấy nhầm DLL cũ.
     /// </summary>
-    private static (string Path, Dictionary<string, string> Map) GenerateStubs(List<IRevitCommand> commands)
+    private static (string Path, Dictionary<string, string> Map) GenerateStubs(List<string> names)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var source = new StringBuilder("namespace InnoPro.VnRevitMcp.Buttons {\n");
-        for (var i = 0; i < commands.Count; i++)
+        for (var i = 0; i < names.Count; i++)
         {
             var className = $"B{i}";
-            map[commands[i].Name] = $"InnoPro.VnRevitMcp.Buttons.{className}";
+            map[names[i]] = $"InnoPro.VnRevitMcp.Buttons.{className}";
             source.Append($$"""
                 [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
                 public sealed class {{className}} : Autodesk.Revit.UI.IExternalCommand
@@ -193,7 +223,7 @@ internal static class RibbonManager
                     public Autodesk.Revit.UI.Result Execute(Autodesk.Revit.UI.ExternalCommandData data, ref string message, Autodesk.Revit.DB.ElementSet elements) =>
                         ((System.Func<string, Autodesk.Revit.UI.ExternalCommandData, Autodesk.Revit.UI.Result>)
                             System.AppDomain.CurrentDomain.GetData({{SymbolDisplay.FormatLiteral(ButtonRunner.DataKey, true)}}))
-                        ({{SymbolDisplay.FormatLiteral(commands[i].Name, true)}}, data);
+                        ({{SymbolDisplay.FormatLiteral(names[i], true)}}, data);
                 }
 
                 """);

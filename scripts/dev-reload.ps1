@@ -4,9 +4,9 @@
   Vòng phát triển nhanh: build, chép CommandSet vào bản đã cài, rồi bảo Revit đang chạy nạp lại. Không cần tắt Revit.
 
 .DESCRIPTION
-  Chỉ áp dụng cho CommandSet (Commands\*), chép vào %LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\addin\Commands.
-  Nếu phần lõi (Addin, Sdk, Bridge) thay đổi thì script báo, khi đó chạy install-dev.ps1
-  (Revit đang mở thì bản mới có hiệu lực từ lần mở Revit sau).
+  Chép CommandSet, lõi (InnoPro.Revit.Core, Sdk, Bridge) và module chat vào %LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\addin.
+  Revit đang mở tự nạp nóng lõi mới khi rảnh. Chỉ khi bộ nạp (InnoPro.Revit.Loader) đổi thì script báo chạy install-dev.ps1
+  rồi mở lại Revit.
 #>
 
 param([switch]$SkipBuild)
@@ -41,6 +41,14 @@ if (Test-Path $commands) { Remove-Item $commands -Recurse -Force }
 Copy-Item (Join-Path $staged "Commands") $commands -Recurse
 Write-Host "Đã chép CommandSet vào $commands"
 
+# Lõi, SDK, Bridge, module chat: Revit chạy bản sao trong cache\core nên chép đè được; bộ nạp thấy lõi đổi thì tự nạp
+# nóng khi Revit rảnh (vài giây). Bộ nạp (InnoPro.Revit.Addin.dll) đang bị Revit khóa nên không chép.
+Get-ChildItem $staged -File | Where-Object { $_.Name -notlike "InnoPro.Revit.Addin.*" } | Copy-Item -Destination $installed -Force
+$modules = Join-Path $installed "Modules"
+if (Test-Path $modules) { Remove-Item $modules -Recurse -Force }
+Copy-Item (Join-Path $staged "Modules") $modules -Recurse
+Write-Host "Đã chép lõi và module chat; Revit đang mở tự nạp bản mới khi rảnh."
+
 # Gửi reload_commands tới mọi phiên Revit đang chạy add-in.
 $pipes = [IO.Directory]::GetFiles("\\.\pipe\") | ForEach-Object { [IO.Path]::GetFileName($_) } | Where-Object { $_ -like "InnoPro.VnRevitMcp.*" }
 foreach ($pipe in $pipes) {
@@ -59,5 +67,5 @@ foreach ($pipe in $pipes) {
 if (-not $pipes) { Write-Host "Không có Revit nào đang chạy; lệnh mới sẽ có khi mở Revit." }
 
 if ($hostChanged) {
-    Write-Warning "Phần lõi (Addin/Sdk/Bridge) đã thay đổi: chạy install-dev.ps1 rồi mở lại Revit để cập nhật."
+    Write-Warning "Bộ nạp (InnoPro.Revit.Loader) đã thay đổi: chạy install-dev.ps1 rồi mở lại Revit để cập nhật."
 }

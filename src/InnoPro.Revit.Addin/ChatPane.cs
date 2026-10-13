@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using Autodesk.Revit.UI;
@@ -8,25 +8,15 @@ using InnoPro.Revit.Sdk;
 namespace InnoPro.Revit.Addin;
 
 /// <summary>
-/// Khung "InnoPro AI" gắn cạnh Revit. Nội dung là module chat (Modules\Chat) nạp trong AssemblyLoadContext riêng
-/// khi người dùng mở lần đầu, nên Revit khởi động không chậm và thư viện của module không xung đột add-in khác.
+/// Khung "InnoPro AI" gắn cạnh Revit. Bộ nạp đăng ký khung (Revit chỉ cho đăng ký lúc khởi động) và đưa phần gốc cho lõi;
+/// nội dung là module chat (Modules\Chat) nạp trong AssemblyLoadContext riêng khi người dùng mở lần đầu,
+/// nên Revit khởi động không chậm và thư viện của module không xung đột add-in khác.
 /// </summary>
-internal sealed class ChatPane : IDockablePaneProvider
+internal sealed class ChatPane(ContentControl root)
 {
     public static readonly DockablePaneId Id = new(new Guid("6E0B5F4A-3C2D-4E8B-9A71-2F5D8C4B1E63"));
 
-    private readonly ContentControl _root = new()
-    {
-        Background = System.Windows.Media.Brushes.White,
-        Content = new TextBlock { Text = "Bấm nút Chat AI trên tab InnoPro để bắt đầu.", Margin = new Thickness(12), TextWrapping = TextWrapping.Wrap },
-    };
     private bool _loaded;
-
-    public void SetupDockablePane(DockablePaneProviderData data)
-    {
-        data.FrameworkElement = _root;
-        data.InitialState = new DockablePaneState { DockPosition = DockPosition.Tabbed, TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette };
-    }
 
     public void EnsureLoaded(IRevitHost host)
     {
@@ -38,14 +28,21 @@ internal sealed class ChatPane : IDockablePaneProvider
             if (!File.Exists(dll)) throw new FileNotFoundException("Chưa cài module chat.", dll);
             var context = new PluginLoadContext("Chat", dir, collectible: false);
             var create = context.LoadFromFileBytes(dll).GetType("InnoPro.Revit.Chat.ChatModule")!.GetMethod("CreateView")!;
-            _root.Content = (FrameworkElement)create.Invoke(null, [host])!;
+            root.Content = (FrameworkElement)create.Invoke(null, [host])!;
             _loaded = true;
         }
         catch (Exception ex)
         {
             Log.Error("Không nạp được module chat", ex);
-            _root.Content = new TextBlock { Text = $"Không nạp được module chat: {(ex.InnerException ?? ex).Message}", Margin = new Thickness(12), TextWrapping = TextWrapping.Wrap };
+            root.Content = new TextBlock { Text = $"Không nạp được module chat: {(ex.InnerException ?? ex).Message}", Margin = new Thickness(12), TextWrapping = TextWrapping.Wrap };
         }
+    }
+
+    /// <summary>Sau khi nạp nóng: khung đang có chat của lõi cũ thì thay bằng chat của lõi mới (hội thoại bắt đầu lại).</summary>
+    public void ReloadIfShown(IRevitHost host)
+    {
+        if (root.Content is TextBlock) return;
+        EnsureLoaded(host);
     }
 }
 
