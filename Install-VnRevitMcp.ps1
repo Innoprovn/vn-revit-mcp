@@ -238,7 +238,8 @@ function Install-VnRevitMcp {
         Write-Host "AI client khác: khai báo MCP server kiểu stdio, command = $exe"
         Write-Host ""
         Write-Host "Kiểm tra (vn-revit-mcp doctor):"
-        try { & $exe doctor | ForEach-Object { Write-Host "  $_" } } catch { Write-Warning "Không chạy được doctor: $($_.Exception.Message)" }
+        # Đầu vào rỗng: bản cũ chưa có "doctor" sẽ chạy như MCP server và thoát ngay khi hết stdin, không treo bộ cài.
+        try { "" | & $exe doctor | ForEach-Object { Write-Host "  $_" } } catch { Write-Warning "Không chạy được doctor: $($_.Exception.Message)" }
     }
     finally {
         Remove-Item $temp -Recurse -Force -ErrorAction SilentlyContinue
