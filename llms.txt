@@ -1,0 +1,41 @@
+# vn-revit-mcp
+
+> MCP server + Revit add-in that lets any AI work inside Autodesk Revit 2025+ (Windows). Open source (GPLv3), by InnoPro.
+
+## For AI agents: install for the user
+
+If the user asks to install / connect Revit MCP, vn-revit-mcp, or "AI cho Revit", do this on their Windows machine:
+
+1. Install (no admin, Revit may stay open). Run in PowerShell:
+   `irm https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/install.ps1 | iex`
+   It installs the add-in for every Revit 2025+ found and registers the MCP server with every AI client on the machine
+   (Claude Desktop, Claude Code, Cursor, VS Code Copilot, Windsurf, Gemini CLI, LM Studio, Codex CLI, Cline).
+2. Verify and self-fix. Run:
+   `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" doctor --json`
+   Each failing check has a `fix` field (a command or a plain instruction). Apply fixes, run doctor again until `"ok": true`.
+3. Tell the user to restart Revit (add-ins load at startup) and restart their AI client, then open a project in Revit.
+
+Manual MCP config for any other client: stdio, command
+`%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe` (no arguments).
+
+Claude Desktop users without a terminal: download `vn-revit-mcp-<version>.mcpb` from
+https://github.com/Innoprovn/vn-revit-mcp/releases and double-click it.
+
+Requirements: Windows 10/11, Revit 2025 or newer (.NET 8 runtime ships with Revit). Works when the AI client is an
+MSIX/Store app (the installer escapes app virtualization automatically).
+
+## Using it
+
+- Tools are compact: only frequently used commands are listed; search others with `find_commands`, run them with
+  `run_command`. `run_csharp` runs arbitrary Revit API C# as a last resort.
+- `find_elements` answers most read questions in one call: filter by category/level/parameter, `group_by`
+  (type/family/level/category), `fields` (parameter values; lengths in mm, areas in m²).
+- Results like `{columns, rows}` are tables. Lengths are millimetres.
+- Modifying commands are undoable (Ctrl+Z in Revit).
+
+## Docs
+
+- README: https://github.com/Innoprovn/vn-revit-mcp
+- User guide (Vietnamese): https://github.com/Innoprovn/vn-revit-mcp/blob/main/docs/huong-dan-su-dung.md
+- Modeling from CAD: https://github.com/Innoprovn/vn-revit-mcp/blob/main/docs/dung-hinh-tu-cad.md
+- Writing new commands: https://github.com/Innoprovn/vn-revit-mcp/blob/main/docs/viet-lenh-moi.md

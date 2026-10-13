@@ -236,16 +236,57 @@ function Install-VnRevitMcp {
             }
         }
         Write-Host "AI client khác: khai báo MCP server kiểu stdio, command = $exe"
+        Write-Host ""
+        Write-Host "Kiểm tra (vn-revit-mcp doctor):"
+        try { & $exe doctor | ForEach-Object { Write-Host "  $_" } } catch { Write-Warning "Không chạy được doctor: $($_.Exception.Message)" }
     }
     finally {
         Remove-Item $temp -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
+# AI client chạy dạng MSIX (Claude Desktop/Claude Code bản Store...) bị Windows chuyển hướng thư mục mới tạo dưới
+# %LOCALAPPDATA% vào vùng riêng của ứng dụng: Revit không thấy add-in. Phát hiện bằng thực nghiệm rồi nhờ Explorer
+# chạy lại chính script này ở ngoài, chờ xong và in lại kết quả.
+function Test-InPackage {
+    $name = "VnRevitMcpProbe-" + [guid]::NewGuid().ToString("N")
+    $probe = Join-Path $env:LOCALAPPDATA $name
+    New-Item -ItemType Directory $probe -ErrorAction SilentlyContinue | Out-Null
+    try { return [bool](Get-ChildItem (Join-Path $env:LOCALAPPDATA "Packages\*\LocalCache\Local\$name") -Force -ErrorAction SilentlyContinue) }
+    finally { Remove-Item $probe -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+function Invoke-Outside([string]$Script, [string[]]$Arguments) {
+    $id = [guid]::NewGuid().ToString("N").Substring(0, 8)
+    $cmd = Join-Path $env:TEMP "vn-revit-mcp-outside-$id.cmd"
+    $log = Join-Path $env:TEMP "vn-revit-mcp-outside-$id.log"
+    $argText = ($Arguments | ForEach-Object { if ($_ -match '\s') { "`"$_`"" } else { $_ } }) -join ' '
+    @(
+        "@echo off", "chcp 65001 >nul", "set VN_REVIT_MCP_OUTSIDE=1",
+        "powershell -NoProfile -ExecutionPolicy Bypass -File `"$Script`" $argText > `"$log`" 2>&1",
+        "echo __VN_REVIT_MCP_DONE__ >> `"$log`""
+    ) | Set-Content $cmd -Encoding ASCII
+    Write-Host "Đang chạy trong ứng dụng đóng gói (MSIX): chạy bộ cài ở ngoài qua Explorer..." -ForegroundColor Yellow
+    Start-Process explorer.exe -ArgumentList "`"$cmd`""
+    $deadline = (Get-Date).AddMinutes(15)
+    while ((Get-Date) -lt $deadline -and -not ((Test-Path $log) -and (Select-String -Path $log -Pattern '__VN_REVIT_MCP_DONE__' -Quiet))) { Start-Sleep -Seconds 2 }
+    if (Test-Path $log) { Get-Content $log -Encoding UTF8 | Where-Object { $_ -notmatch '__VN_REVIT_MCP_DONE__' } | ForEach-Object { Write-Host $_ } }
+    else { Write-Warning "Không thấy kết quả. Hãy chạy trực tiếp trong PowerShell: $Script $argText" }
+    Remove-Item $cmd, $log -ErrorAction SilentlyContinue
+}
+
 # Bọc trong hàm để chạy được qua "irm | iex" mà không đóng cửa sổ PowerShell khi lỗi.
 # Chỉ dùng exit khi chạy từ file (-File hoặc & Install-VnRevitMcp.ps1); chạy qua iex thì exit sẽ đóng cửa sổ.
 $scriptFile = if ($MyInvocation.MyCommand.Name -eq "Install-VnRevitMcp.ps1") { $MyInvocation.MyCommand.Path }
 try {
+    if ($scriptFile -and -not $env:VN_REVIT_MCP_OUTSIDE -and (Test-InPackage)) {
+        $forward = @()
+        if ($Source) { $forward += "-Source", $Source }
+        if ($Version) { $forward += "-Version", $Version }
+        if ($NoClients) { $forward += "-NoClients" }
+        Invoke-Outside $scriptFile $forward
+        exit 0
+    }
     Install-VnRevitMcp -Source $Source -Version $Version -NoClients:$NoClients
     if ($scriptFile) { exit 0 }
 }

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,7 +11,7 @@ namespace InnoPro.Mcp.Server.Setup;
 /// </summary>
 public static class SetupCli
 {
-    private static readonly string[] Commands = ["setup", "unsetup", "clients"];
+    private static readonly string[] Commands = ["setup", "unsetup", "clients", "doctor"];
 
     public static bool IsSetupCommand(string[] args) =>
         args.Length > 0 && Commands.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -50,6 +50,7 @@ public static class SetupCli
           vn-revit-mcp.exe setup   [--clients a,b|all] [--dry-run] [--home <thư mục>] [--command <exe>] [--json]
           vn-revit-mcp.exe unsetup [--clients a,b|all] [--dry-run] [--home <thư mục>] [--json]
           vn-revit-mcp.exe clients [--home <thư mục>] [--json]
+          vn-revit-mcp.exe doctor  [--json]      kiểm tra cài đặt, Revit, AI client; mục lỗi kèm cách sửa
         Mã client: claude-desktop, claude-code, cursor, vscode, vscode-insiders, windsurf, gemini, lmstudio, codex, cline
         """;
 
@@ -100,6 +101,8 @@ public static class SetupCli
         }
         var paths = options.Home != null ? SetupPaths.FromHome(options.Home) : SetupPaths.FromEnvironment();
         var clients = McpClient.All.Where(c => options.Clients == null || options.Clients.Contains(c.Id)).ToList();
+
+        if (options.Command == "doctor") return Doctor.Run(paths, options.Json);
 
         if (options.Command == "clients")
         {

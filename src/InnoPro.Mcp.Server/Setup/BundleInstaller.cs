@@ -80,7 +80,7 @@ internal static class BundleInstaller
     /// Thư mục mới tạo ngay dưới %LOCALAPPDATA% bị chuyển vào Packages\&lt;gói&gt;\LocalCache\Local khi chạy trong MSIX
     /// (đo thực tế; API gói không phản ánh đúng trường hợp này).
     /// </summary>
-    private static bool InPackage()
+    internal static bool InPackage()
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var name = "VnRevitMcpProbe-" + Guid.NewGuid().ToString("N");

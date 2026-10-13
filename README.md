@@ -1,4 +1,4 @@
-# vn-revit-mcp
+﻿# vn-revit-mcp
 
 **Cho AI làm việc với Autodesk Revit.** Mã nguồn mở, miễn phí, do [InnoPro](https://innopro.vn) phát triển.
 
@@ -11,7 +11,15 @@
 
 ## Cài đặt
 
-Mở **PowerShell** và chạy (không cần quyền admin, Revit đang mở cũng được):
+**Cách dễ nhất: nhờ AI cài.** Gõ vào Claude Code, Codex, Gemini CLI, Cursor hoặc Copilot (chế độ agent):
+
+> Cài vn-revit-mcp cho Revit theo hướng dẫn ở github.com/Innoprovn/vn-revit-mcp
+
+AI tự cài, tự kiểm tra bằng `vn-revit-mcp doctor` và tự sửa nếu có lỗi (hướng dẫn cho AI: [llms.txt](llms.txt)).
+
+Hoặc tự cài:
+
+mở **PowerShell** và chạy (không cần quyền admin, Revit đang mở cũng được):
 
 ```powershell
 irm https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/install.ps1 | iex
@@ -143,4 +151,5 @@ with every detected AI client (Claude Desktop/Code, Cursor, VS Code, Windsurf, G
 Inside Revit, an **InnoPro** tab offers a chat pane (Claude via the Anthropic SDK; OpenAI, Gemini, OpenRouter, Ollama,
 LM Studio via OpenAI-compatible APIs) and a button for every command with an auto-generated input form.
 Add a command by dropping a single `.cs` file into the Scripts folder — it is compiled in Revit and hot-reloaded.
-Licensed GPLv3 with a plugin exception. See [AGENTS.md](AGENTS.md) for AI coding agents.
+**AI agents installing this for a user:** follow [llms.txt](llms.txt) (install one-liner, then `vn-revit-mcp doctor --json` and apply each `fix`).
+Licensed GPLv3 with a plugin exception. See [AGENTS.md](AGENTS.md) for AI coding agents working on the code.
