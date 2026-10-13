@@ -32,6 +32,7 @@ internal static class ProviderPresets
         new("openrouter", "OpenRouter", "openai", "https://openrouter.ai/api/v1", true, "", "Một key, nhiều model · openrouter.ai"),
         new("ollama", "Ollama (trên máy)", "openai", "http://localhost:11434/v1", false, "", "Chạy trên máy, dữ liệu không ra ngoài"),
         new("lmstudio", "LM Studio (trên máy)", "openai", "http://localhost:1234/v1", false, "", "Chạy trên máy, dữ liệu không ra ngoài"),
+        new("llamacpp", "llama.cpp (trên máy)", "openai", "http://localhost:8080/v1", false, "", "llama-server; đổi cổng nếu khác 8080"),
         new("custom", "Tùy chỉnh", "openai", "http://localhost:8000/v1", false, "", "Máy chủ API dạng OpenAI"),
     ];
 
