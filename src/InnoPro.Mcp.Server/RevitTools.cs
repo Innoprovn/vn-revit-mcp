@@ -22,6 +22,9 @@ public sealed class RevitTools(RevitBridgeClient bridge)
     private static readonly bool ExposeAll =
         string.Equals(Environment.GetEnvironmentVariable("VN_REVIT_MCP_TOOLS"), "all", StringComparison.OrdinalIgnoreCase);
 
+    private static readonly JsonElement StatusSchema = JsonDocument.Parse(
+        """{"type":"object","properties":{"pid":{"type":"integer","description":"Chuyển sang phiên Revit này (lấy từ danh sách sessions)."}}}""").RootElement;
+
     private static readonly JsonElement EmptySchema = JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement;
 
     private static readonly string ManifestFile = Path.Combine(
@@ -40,8 +43,9 @@ public sealed class RevitTools(RevitBridgeClient bridge)
             new()
             {
                 Name = StatusTool,
-                Description = "Kiểm tra kết nối Revit: phiên bản, tài liệu đang mở, số lệnh, lỗi nạp lệnh. Gọi khi lệnh khác báo lỗi kết nối.",
-                InputSchema = EmptySchema,
+                Description = "Kiểm tra kết nối Revit: phiên bản, tài liệu đang mở, số lệnh, lỗi nạp lệnh. Gọi khi lệnh khác báo lỗi kết nối. " +
+                              "Mở nhiều Revit: liệt kê các phiên; truyền pid để làm việc với phiên khác.",
+                InputSchema = StatusSchema,
             },
             new()
             {
@@ -92,7 +96,7 @@ public sealed class RevitTools(RevitBridgeClient bridge)
             switch (name)
             {
                 case StatusTool:
-                    return Json(await bridge.SendAsync(BridgeProtocol.MethodPing, null, QuickTimeout, token));
+                    return await StatusAsync(arguments, token);
                 case ReloadTool:
                     var reloaded = await bridge.SendAsync(BridgeProtocol.MethodReloadCommands, null, InvokeTimeout, token);
                     await server.SendNotificationAsync(NotificationMethods.ToolListChangedNotification, token);
@@ -119,6 +123,38 @@ public sealed class RevitTools(RevitBridgeClient bridge)
         {
             return Text(ex.Message, isError: true);
         }
+    }
+
+    /// <summary>Trạng thái phiên đang làm việc; nhiều phiên thì kèm danh sách (pid, phiên bản, tài liệu) để AI chọn.</summary>
+    private async Task<CallToolResult> StatusAsync(IDictionary<string, JsonElement>? arguments, CancellationToken token)
+    {
+        var running = RevitBridgeClient.FindRevitProcesses();
+        if (arguments != null && arguments.TryGetValue("pid", out var p) && p.ValueKind == JsonValueKind.Number)
+        {
+            if (!running.Contains(p.GetInt32())) return Text($"Không có phiên Revit PID {p.GetInt32()}. Đang mở: {string.Join(", ", running)}.", true);
+            RevitBridgeClient.Selected = p.GetInt32();
+        }
+        var current = await bridge.SendAsync(BridgeProtocol.MethodPing, null, QuickTimeout, token);
+        if (running.Count < 2) return Json(current);
+
+        var sessions = new List<object>();
+        foreach (var pid in running)
+        {
+            try
+            {
+                var r = await bridge.SendAsync(BridgeProtocol.MethodPing, null, QuickTimeout, token, pid);
+                sessions.Add(new
+                {
+                    pid,
+                    revit = r.GetProperty("revit_version").GetString(),
+                    document = r.TryGetProperty("active_document", out var d) ? d.GetString() : null,
+                    addin = r.GetProperty("addin_version").GetString(),
+                    selected = pid == RevitBridgeClient.Selected,
+                });
+            }
+            catch (RevitBridgeException ex) { sessions.Add(new { pid, error = ex.Message, selected = pid == RevitBridgeClient.Selected }); }
+        }
+        return Text(JsonSerializer.Serialize(new { current, sessions, note = "Đổi phiên: revit_status pid=..." }, BridgeProtocol.Json), false);
     }
 
     private Task<JsonElement> Invoke(string name, JsonElement? arguments, CancellationToken token) =>
@@ -158,7 +194,7 @@ public sealed class RevitTools(RevitBridgeClient bridge)
                 Content =
                 [
                     ImageContentBlock.FromBytes(bytes, "image/png"),
-                    new TextContentBlock { Text = JsonSerializer.Serialize(rest) },
+                    new TextContentBlock { Text = JsonSerializer.Serialize(rest, BridgeProtocol.Json) },
                 ],
             };
         }

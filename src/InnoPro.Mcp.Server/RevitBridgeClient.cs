@@ -1,4 +1,5 @@
-using System.IO.Pipes;
+﻿using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using InnoPro.Bridge;
 
@@ -23,9 +24,15 @@ public sealed class RevitBridgeClient
         .Distinct()
         .ToList();
 
-    public async Task<JsonElement> SendAsync(string method, object? parameters, TimeSpan timeout, CancellationToken token)
+    /// <summary>
+    /// Phiên Revit đang làm việc. Nhiều phiên: lần đầu tự chọn Revit người dùng thao tác gần nhất (cửa sổ trên cùng),
+    /// rồi giữ nguyên để id phần tử không lẫn giữa các mô hình; AI đổi bằng revit_status pid=...
+    /// </summary>
+    public static int? Selected { get; set; }
+
+    public async Task<JsonElement> SendAsync(string method, object? parameters, TimeSpan timeout, CancellationToken token, int? pid = null)
     {
-        var pipeName = ResolvePipe();
+        var pipeName = pid is int target ? BridgeProtocol.PipeName(target) : ResolvePipe();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
         cts.CancelAfter(timeout);
 
@@ -68,14 +75,31 @@ public sealed class RevitBridgeClient
         if (int.TryParse(PinnedPid, out var pinned)) return BridgeProtocol.PipeName(pinned);
 
         var running = FindRevitProcesses();
-        return running.Count switch
-        {
-            0 => throw new RevitBridgeException(
-                "Chưa thấy Revit nào đang chạy vn-revit-mcp. Hãy mở Revit (2025 trở lên) và bật nút MCP trên tab InnoPro."),
-            1 => BridgeProtocol.PipeName(running[0]),
-            _ => throw new RevitBridgeException(
-                $"Đang mở {running.Count} phiên Revit (PID {string.Join(", ", running)}). " +
-                "Đặt biến môi trường VN_REVIT_MCP_PID để chọn một phiên."),
-        };
+        if (running.Count == 0)
+            throw new RevitBridgeException(
+                "Chưa thấy Revit nào đang chạy vn-revit-mcp. Hãy mở Revit (2025 trở lên) và bật nút MCP trên tab InnoPro.");
+        if (Selected is not int chosen || !running.Contains(chosen))
+            Selected = chosen = running.Count == 1 ? running[0] : TopMost(running) ?? running.Max();
+        return BridgeProtocol.PipeName(chosen);
     }
+
+    /// <summary>Phiên Revit có cửa sổ nằm trên cùng (EnumWindows đi từ trên xuống theo thứ tự Z).</summary>
+    private static int? TopMost(IReadOnlyList<int> pids)
+    {
+        int? found = null;
+        EnumWindows((h, _) =>
+        {
+            if (!IsWindowVisible(h)) return true;
+            GetWindowThreadProcessId(h, out var pid);
+            if (!pids.Contains((int)pid)) return true;
+            found = (int)pid;
+            return false;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    private delegate bool EnumProc(IntPtr hWnd, IntPtr lParam);
+    [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc proc, IntPtr lParam);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
 }
