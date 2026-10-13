@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -8,7 +8,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>InnoPro.Sim4D</AssemblyName>
     <RootNamespace>BIMTech4D</RootNamespace>
-    <Version>1.0.4</Version>
+    <Version>1.0.5</Version>
     <Description>Tiến độ gắn phần tử, Gantt, chạy mô phỏng theo ngày ngay trong Revit; AI tự sinh tiến độ và hiển thị mô hình tại một ngày.</Description>
   </PropertyGroup>
 
