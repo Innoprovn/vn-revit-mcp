@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using InnoPro.Mcp.Server;
 using InnoPro.Mcp.Server.Setup;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +40,7 @@ builder.Services
             "Điều khiển Autodesk Revit (2025+) qua add-in InnoPro. Chiều dài dùng milimét. " +
             "Ngoài các tool đang hiện, còn nhiều lệnh khác: tra bằng find_commands rồi chạy bằng run_command; " +
             "chỉ dùng run_csharp khi thật sự không có lệnh phù hợp. " +
+            "Việc khó hoặc nhiều bước: tra revit_skill trước (cách làm đã kiểm chứng). Viết mã: tra revit_api trước. " +
             "Tiết kiệm: find_elements output=ids rồi truyền id sang lệnh khác, không đọc từng phần tử. " +
             "Kết quả dạng {columns, rows} là bảng. " +
             "Nếu lệnh báo lỗi kết nối, gọi revit_status và hướng dẫn người dùng mở Revit, bật nút MCP trên tab InnoPro.";

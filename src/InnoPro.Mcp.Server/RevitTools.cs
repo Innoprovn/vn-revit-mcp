@@ -51,6 +51,7 @@ public sealed class RevitTools(RevitBridgeClient bridge)
             },
         };
 
+        tools.Add(new Tool { Name = Skills.ToolName, Description = Skills.Description, InputSchema = Skills.Schema });
         tools.Add(new Tool { Name = TokenMeter.ToolName, Description = TokenMeter.Description, InputSchema = TokenMeter.Schema });
         tools.Add(new Tool { Name = Knowledge.RevitApiSearch.ToolName, Description = Knowledge.RevitApiSearch.Description, InputSchema = Knowledge.RevitApiSearch.Schema });
 
@@ -94,6 +95,8 @@ public sealed class RevitTools(RevitBridgeClient bridge)
                     var reloaded = await bridge.SendAsync(BridgeProtocol.MethodReloadCommands, null, InvokeTimeout, token);
                     await server.SendNotificationAsync(NotificationMethods.ToolListChangedNotification, token);
                     return Json(reloaded);
+                case Skills.ToolName:
+                    return Text(Skills.Run(Arg(arguments, "query"), Arg(arguments, "name")), false);
                 case TokenMeter.ToolName:
                     var days = arguments != null && arguments.TryGetValue("days", out var dv) && dv.ValueKind == JsonValueKind.Number ? dv.GetInt32() : 1;
                     return Text(TokenMeter.Report(days), false);
