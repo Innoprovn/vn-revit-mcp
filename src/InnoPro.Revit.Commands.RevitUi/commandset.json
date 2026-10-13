@@ -1,0 +1,1 @@
+{ "name": "Giao diện Revit", "description": "Bản đồ ribbon, kích hoạt lệnh có sẵn của Revit, trạng thái giao diện.", "author": "InnoPro", "assemblies": ["InnoPro.Revit.Commands.RevitUi.dll"] }

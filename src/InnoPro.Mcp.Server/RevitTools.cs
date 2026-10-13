@@ -77,7 +77,8 @@ public sealed class RevitTools(RevitBridgeClient bridge)
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var result = await CallCoreAsync(server, name, arguments, token);
         TokenMeter.RecordCall(name, arguments == null ? null : JsonSerializer.Serialize(arguments),
-            string.Concat(result.Content.OfType<TextContentBlock>().Select(c => c.Text)), result.IsError == true, watch.ElapsedMilliseconds);
+            string.Concat(result.Content.OfType<TextContentBlock>().Select(c => c.Text)), result.IsError == true, watch.ElapsedMilliseconds,
+            result.Content.OfType<ImageContentBlock>().Sum(i => TokenMeter.ImageTokens(i.DecodedData.Span)));
         return result;
     }
 
@@ -136,8 +137,28 @@ public sealed class RevitTools(RevitBridgeClient bridge)
         }
     }
 
-    private static CallToolResult Json(JsonElement result) =>
-        Text(result.ValueKind == JsonValueKind.Undefined ? "OK" : result.GetRawText(), isError: false);
+    private static CallToolResult Json(JsonElement result)
+    {
+        // Lệnh trả "image_file" (vd capture_view): gửi ảnh thẳng cho AI xem, kèm phần chữ không có đường dẫn.
+        if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("image_file", out var f) && f.ValueKind == JsonValueKind.String
+            && File.Exists(f.GetString()) && new FileInfo(f.GetString()!).Length < 5_000_000)
+        {
+            var path = f.GetString()!;
+            var bytes = File.ReadAllBytes(path);
+            try { File.Delete(path); } catch (IOException) { }
+            var rest = new Dictionary<string, JsonElement>();
+            foreach (var p in result.EnumerateObject().Where(p => p.Name != "image_file")) rest[p.Name] = p.Value;
+            return new CallToolResult
+            {
+                Content =
+                [
+                    ImageContentBlock.FromBytes(bytes, "image/png"),
+                    new TextContentBlock { Text = JsonSerializer.Serialize(rest) },
+                ],
+            };
+        }
+        return Text(result.ValueKind == JsonValueKind.Undefined ? "OK" : result.GetRawText(), isError: false);
+    }
 
     private static CallToolResult Text(string text, bool isError) => new()
     {

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.ML.Tokenizers;
@@ -38,10 +38,21 @@ public static class TokenMeter
     public static void RecordList(string toolsJson, int toolCount) =>
         Write(new JsonObject { ["kind"] = "list", ["tools"] = toolCount, ["out"] = Count(toolsJson) });
 
-    public static void RecordCall(string tool, string? argumentsJson, string resultText, bool isError, long milliseconds) =>
+    /// <summary>Ảnh PNG: Claude tính khoảng rộng × cao / 750 token (ảnh lớn hơn ~1568 px bị thu nhỏ trước).</summary>
+    public static int ImageTokens(ReadOnlySpan<byte> png)
+    {
+        if (png.Length < 24) return 0;
+        double w = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png[16..20]);
+        double h = System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png[20..24]);
+        var scale = Math.Min(1.0, 1568.0 / Math.Max(w, h));
+        return (int)Math.Ceiling(w * scale * h * scale / 750);
+    }
+
+    public static void RecordCall(string tool, string? argumentsJson, string resultText, bool isError, long milliseconds, int imageTokens = 0) =>
         Write(new JsonObject
         {
-            ["kind"] = "call", ["tool"] = tool, ["in"] = Count(argumentsJson), ["out"] = Count(resultText),
+            ["kind"] = "call", ["tool"] = tool, ["in"] = Count(argumentsJson), ["out"] = Count(resultText) + imageTokens,
+            ["image"] = imageTokens > 0 ? imageTokens : null,
             ["ms"] = milliseconds, ["error"] = isError ? true : null,
         });
 
