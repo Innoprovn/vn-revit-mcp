@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -121,11 +121,21 @@ public sealed class RevitUiPost : RevitCommandBase
     public override string Category => "Giao diện Revit";
     public override string Description =>
         "Kích hoạt một lệnh có sẵn của Revit như người bấm nút (vd Aligned Dimension, Tag by Category): id lấy từ revit_ui_find, " +
-        "hoặc tên PostableCommand (vd \"AlignedDimension\"). Revit chạy lệnh sau khi lượt hiện tại xong; người dùng thao tác tiếp trên màn hình.";
+        "hoặc tên PostableCommand (vd \"AlignedDimension\"). Có clicks thì \"bàn tay ảo\" bấm tiếp vào các điểm đó trên view đang mở như người dùng " +
+        "(điểm mm hoặc element_id), kết thúc bằng Esc; xem kết quả bằng revit_ui_result. Không có clicks thì người dùng thao tác tiếp.";
     public override string InputSchema => """
         {
           "type": "object",
-          "properties": { "id": { "type": "string", "description": "Mã lệnh ribbon (ID_...) hoặc tên PostableCommand." } },
+          "properties": {
+            "id": { "type": "string", "description": "Mã lệnh ribbon (ID_...) hoặc tên PostableCommand." },
+            "clicks": { "type": "array", "description": "Điểm bấm lần lượt trên view đang mở: {x,y,z} mm, hoặc {element_id, at: center|start|end}; thêm tab: n để bấm Tab n lần trước khi bấm (đổi đối tượng được bắt).",
+              "items": { "type": "object" } },
+            "finish": { "type": "integer", "description": "Số lần Esc sau khi bấm xong để kết thúc lệnh. Mặc định 2." },
+            "dialog": { "type": "string", "enum": ["none", "ok", "cancel", "yes", "no"], "description": "Tự trả lời hộp thoại hiện ra. Mặc định none (để người dùng thấy)." },
+            "mode": { "type": "string", "enum": ["message", "input"], "description": "message (mặc định): gửi thẳng vào view, không chiếm chuột. input: dùng chuột thật." },
+            "interval_ms": { "type": "integer", "description": "Nghỉ giữa các lần bấm. Mặc định 350." },
+            "zoom": { "type": "boolean", "description": "Tự phóng to vùng có các điểm bấm trước khi bấm. Mặc định true." }
+          },
           "required": ["id"]
         }
         """;
@@ -139,8 +149,45 @@ public sealed class RevitUiPost : RevitCommandBase
         if (command == null) throw new CommandException($"Không có lệnh '{id}'. Tìm mã đúng bằng revit_ui_find.");
         var app = context.UIApplication;
         if (!app.CanPostCommand(command)) throw new CommandException($"Revit không cho kích hoạt '{id}' lúc này (có thể cần mở view phù hợp hoặc chọn phần tử trước).");
+        var clicks = Args.Has(arguments, "clicks") ? Args.GetArray(arguments, "clicks") : [];
+        if (clicks.Count == 0)
+        {
+            app.PostCommand(command);
+            return new { posted = command.Name, note = "Revit sẽ chạy lệnh ngay sau lượt này." };
+        }
+
+        var uidoc = context.UIDocument;
+        var view = uidoc.ActiveView;
+        var (uiView, rect) = VirtualHand.ActiveUiView(uidoc);
+        var model = clicks.Select(c => VirtualHand.ModelPoint(uidoc.Document, c)).ToList();
+        // Như người dùng: phóng to vùng có các điểm bấm cho dễ bắt đúng đối tượng (mỗi pixel vài chục mm thì hay bắt nhầm).
+        if (Args.GetBoolOrDefault(arguments, "zoom", true)) VirtualHand.ZoomTo(uidoc, uiView, view, model);
+        var points = model.Zip(clicks, (m, c) => VirtualHand.ToScreen(view, uiView, rect, m)
+            with { Tab = c.TryGetProperty("tab", out var t) && t.ValueKind == System.Text.Json.JsonValueKind.Number ? t.GetInt32() : 0 }).ToList();
+        var hidden = points.Select((p, i) => (p, i)).Where(x => !x.p.Visible).Select(x => x.i).ToList();
+        if (hidden.Count > 0)
+            throw new CommandException($"Điểm số {string.Join(", ", hidden)} nằm ngoài khung view đang hiện. Phóng to/thu nhỏ view (zoom_to) cho thấy hết rồi thử lại.");
+        var mode = Args.GetStringOrDefault(arguments, "mode", "message");
+        var canvas = VirtualHand.FindCanvas(rect);
+        if (canvas == IntPtr.Zero && mode != "input") throw new CommandException("Không tìm thấy cửa sổ vẽ của view; thử mode \"input\".");
+
+        var session = new VirtualHand.Session
+        {
+            Canvas = canvas,
+            Points = points,
+            UseInput = mode == "input",
+            StartDelay = 700,
+            Interval = (int)Args.GetLongOrDefault(arguments, "interval_ms", 350),
+            FinishEscapes = (int)Args.GetLongOrDefault(arguments, "finish", 2),
+            DialogAnswer = Args.GetStringOrDefault(arguments, "dialog", "none") switch { "ok" => 1, "cancel" => 2, "yes" => 6, "no" => 7, _ => 0 },
+        };
         app.PostCommand(command);
-        return new { posted = command.Name, note = "Revit sẽ chạy lệnh ngay sau lượt này." };
+        VirtualHand.Start(app, session);
+        return new
+        {
+            posted = command.Name, view = view.Name, clicks = points.Count, mode,
+            note = "Đang bấm sau khi Revit chạy lệnh. Gọi revit_ui_result để xem phần tử đã tạo; capture_view để nhìn lại.",
+        };
     }
 }
 
