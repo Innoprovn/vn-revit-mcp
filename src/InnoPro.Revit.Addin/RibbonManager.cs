@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Windows;
 using System.Windows.Media;
@@ -224,11 +224,15 @@ internal static class RibbonManager
     private static (string Path, Dictionary<string, string> Map) GenerateStubs(List<string> names)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var source = new StringBuilder("namespace InnoPro.VnRevitMcp.Buttons {\n");
+        // Namespace riêng cho mỗi bộ nút: Revit tìm lớp nút theo tên đầy đủ, trùng "Buttons.B1" giữa hai bộ
+        // (ví dụ sau khi cài tiện ích hoặc nạp nóng) thì nút sẽ chạy nhầm lệnh của bộ kia.
+        var space = "InnoPro.VnRevitMcp.Buttons.S" + Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", names))))[..12];
+        var source = new StringBuilder($"namespace {space} {{\n");
         for (var i = 0; i < names.Count; i++)
         {
             var className = $"B{i}";
-            map[names[i]] = $"InnoPro.VnRevitMcp.Buttons.{className}";
+            map[names[i]] = $"{space}.{className}";
             source.Append($$"""
                 [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
                 public sealed class {{className}} : Autodesk.Revit.UI.IExternalCommand

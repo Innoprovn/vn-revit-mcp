@@ -12,6 +12,16 @@ import ctypes, ctypes.wintypes as W, glob, importlib.util, json, math, os, subpr
 user32 = ctypes.windll.user32
 user32.SetProcessDPIAware()
 
+# Mọi tiến trình phụ (PowerShell cho OCR/UIA, ffmpeg) chạy không cửa sổ: cửa sổ console mới sẽ cướp focus,
+# làm cú bấm kế tiếp vào Revit chỉ để kích hoạt cửa sổ.
+_run, _popen_init = subprocess.run, subprocess.Popen.__init__
+def _quiet_run(*a, **k):
+    k.setdefault("creationflags", 0x08000000); return _run(*a, **k)
+def _quiet_popen(self, *a, **k):
+    k.setdefault("creationflags", 0x08000000); _popen_init(self, *a, **k)
+subprocess.run = _quiet_run
+subprocess.Popen.__init__ = _quiet_popen
+
 FFMPEG = os.environ.get("FFMPEG") or (glob.glob(os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe")) or ["ffmpeg"])[0]
 CPS = 14.0          # tốc độ đọc phụ đề (ký tự/giây)
 MIN_CAPTION = 3.0   # phụ đề hiện ít nhất (giây)
@@ -81,8 +91,33 @@ def find_element(name, hwnd=None):
 
 
 def revit_hwnd():
-    out = subprocess.run(["powershell", "-NoProfile", "-Command", "(Get-Process Revit | Sort-Object StartTime -Descending | Select-Object -First 1).MainWindowHandle"], capture_output=True, text=True).stdout.strip()
+    out = subprocess.run(["powershell", "-NoProfile", "-Command", "(Get-Process Revit | Sort-Object { $_.Path -like '*Revit 2026*' }, StartTime -Descending | Select-Object -First 1).MainWindowHandle"], capture_output=True, text=True).stdout.strip()
     return int(out)
+
+
+def windows():
+    """Cửa sổ đang hiện: danh sách (hwnd, tiêu đề, pid)."""
+    found = []
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, W.HWND, W.LPARAM)
+    def each(h, _):
+        if user32.IsWindowVisible(h):
+            buf = ctypes.create_unicode_buffer(512); user32.GetWindowTextW(h, buf, 512)
+            pid = W.DWORD(); user32.GetWindowThreadProcessId(h, ctypes.byref(pid))
+            if buf.value: found.append((h, buf.value, pid.value))
+        return True
+    user32.EnumWindows(each, 0)
+    return found
+
+
+def find_window(pattern, timeout=20):
+    """Chờ cửa sổ có tiêu đề khớp regex, trả hwnd."""
+    import re
+    end = time.time() + timeout
+    while time.time() < end:
+        for h, title, _ in windows():
+            if re.search(pattern, title): return h
+        time.sleep(0.4)
+    raise RuntimeError(f"Không thấy cửa sổ '{pattern}'")
 
 
 def place(hwnd, region=(0, 0, 1920, 920)):
@@ -113,7 +148,7 @@ def element_rect(name, hwnd=None):
 def revit(name, args=None, pid=None, method="invoke"):
     import pathlib
     if pid is None:
-        out = subprocess.run(["powershell", "-NoProfile", "-Command", "(Get-Process Revit | Sort-Object StartTime -Descending | Select-Object -First 1).Id"], capture_output=True, text=True).stdout.strip()
+        out = subprocess.run(["powershell", "-NoProfile", "-Command", "(Get-Process Revit | Sort-Object { $_.Path -like '*Revit 2026*' }, StartTime -Descending | Select-Object -First 1).Id"], capture_output=True, text=True).stdout.strip()
         pid = int(out)
     payload = json.dumps({"id": "1", "method": method, "params": {"name": name, "arguments": args or {}} if method == "invoke" else None}, ensure_ascii=False)
     with open(rf"\\.\pipe\InnoPro.VnRevitMcp.{pid}", "r+b", buffering=0) as f:
@@ -228,11 +263,21 @@ class Recorder:
             time.sleep(0.5)
         raise RuntimeError(f"Không thấy phần tử '{name}'")
 
+    def drag(self, x1, y1, x2, y2, duration=1.2):
+        self.move(x1, y1); time.sleep(0.2)
+        mouse_button(True); time.sleep(0.15)
+        self.move(x2, y2, duration); time.sleep(0.15)
+        mouse_button(False); time.sleep(0.4)
+
     def type(self, text, delay=0.045):
         for ch in text: unicode_char(ch); time.sleep(delay)
 
     def press(self, vk):
         key(vk); time.sleep(0.05); key(vk, up=True); time.sleep(0.2)
+
+    def press_combo(self, mod, vk):
+        """Tổ hợp phím, ví dụ Ctrl+A = press_combo(0x11, 0x41)."""
+        key(mod); time.sleep(0.05); key(vk); time.sleep(0.05); key(vk, up=True); key(mod, up=True); time.sleep(0.2)
 
     def wait(self, seconds): time.sleep(seconds)
 
@@ -252,13 +297,14 @@ class Recorder:
         time.sleep(1.5)
 
     # ----- che -----
-    def mask(self, x, y, w, h, pad=3, since=None, until=None, kind="blur"):
+    def mask(self, x, y, w, h, pad=3, since=None, until=None, kind="blur", color=None):
         """Che một vùng màn hình (tọa độ màn hình). since/until: thời điểm thực (time.time()); None = từ đầu / tới cuối."""
         rx, ry, rw, rh = self.region
         x0, y0 = max(0, x - pad - rx), max(0, y - pad - ry)
         x1, y1 = min(rw, x + w + pad - rx), min(rh, y + h + pad - ry)
         if x1 > x0 and y1 > y0:
             m = dict(x=x0, y=y0, w=x1 - x0, h=y1 - y0, since=since, until=until, kind=kind)
+            if color: m["color"] = color
             self.masks.append(m); return m
 
     def mask_names(self, pattern, hwnd, **kw):
@@ -274,6 +320,24 @@ class Recorder:
                  for x, y, w, h, text in ocr(png) if re.search(pattern, text, re.I)]
         os.remove(png)
         return [m for m in found if m]
+
+    def find_text(self, pattern, timeout=15):
+        """Tìm chữ trên màn hình bằng OCR; trả (x, y, w, h) tọa độ màn hình của từ đầu tiên khớp regex."""
+        import re
+        end = time.time() + timeout
+        while True:
+            png = self.out + ".find.png"
+            screen_png(png, self.region)
+            words = ocr(png); os.remove(png)
+            for x, y, w, h, text in words:
+                if re.search(pattern, text, re.I): return (x + self.region[0], y + self.region[1], w, h)
+            if time.time() > end: raise RuntimeError(f"Không thấy chữ '{pattern}' trên màn hình")
+            time.sleep(0.8)
+
+    def click_text(self, pattern, dx=0, dy=0, **kw):
+        x, y, w, h = self.find_text(pattern)
+        self.click(x + w // 2 + dx, y + h // 2 + dy, **kw)
+        return x, y, w, h
 
     def end_masks(self, masks):
         for m in masks: m["until"] = time.time()
@@ -330,7 +394,9 @@ def render(raw, ass, out, masks, w, h):
         mw, mh = min((m["w"] + 1) // 2 * 2, w - mx), min((m["h"] + 1) // 2 * 2, h - my)
         a, b = m.get("since"), m.get("until")
         enable = "" if a is None and b is None else f":enable='between(t,{a or 0:.2f},{b if b is not None else 99999:.2f})'"
-        if m.get("kind") == "delogo":
+        if m.get("kind") == "fill":                      # phủ kín bằng màu (vùng lớn như thanh điều hướng Explorer)
+            chain.append(f"[{last}]drawbox=x={mx}:y={my}:w={mw}:h={mh}:color={m.get('color', '0xF7F7F7')}:t=fill{enable}[v{k}]")
+        elif m.get("kind") == "delogo":
             chain.append(f"[{last}]delogo=x={mx}:y={my}:w={mw}:h={mh}{enable}[v{k}]")
         else:
             lr = max(1, min(10, mh // 2 - 1)); cr = max(1, min(lr, mh // 4 - 1))
@@ -357,10 +423,14 @@ def main():
     r = Recorder(out, getattr(mod, "REGION", REGION))
     if hasattr(mod, "prepare"): mod.prepare(r)
     r.start()
+    error = None
     try: mod.run(r)
+    except Exception as ex:                             # vẫn dựng phần đã quay để xem lại hoặc ghép
+        import traceback; traceback.print_exc(); error = ex
     finally:
         if r.proc: r.stop()
     print(r.finish(getattr(mod, "TITLE", None)))
+    if error: sys.exit(1)
 
 
 if __name__ == "__main__":

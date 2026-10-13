@@ -191,7 +191,7 @@ function Install-VnRevitMcp {
                 New-Item -Path $key -Force -ErrorAction SilentlyContinue | Out-Null
                 New-ItemProperty -Path $key -Name "2c094443-bae5-4dad-83df-1df8dddf5c68" -Value 1 -PropertyType DWord -Force | Out-Null
             }
-            Write-Host "Đã đặt Revit luôn nạp vn-revit-mcp (Always Load), không hỏi lại. Muốn Revit hỏi: cài với -NoTrust."
+            Write-Host "Lần đầu mở Revit, nếu Revit hỏi về add-in chưa ký số (Unsigned Add-In), chọn Always Load."
         }
 
         # 7. Dọn các phiên bản cũ không còn được dùng
