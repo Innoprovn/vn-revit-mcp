@@ -51,6 +51,7 @@ public sealed class RevitTools(RevitBridgeClient bridge)
             },
         };
 
+        tools.Add(new Tool { Name = TokenMeter.ToolName, Description = TokenMeter.Description, InputSchema = TokenMeter.Schema });
         tools.Add(new Tool { Name = Knowledge.RevitApiSearch.ToolName, Description = Knowledge.RevitApiSearch.Description, InputSchema = Knowledge.RevitApiSearch.Schema });
 
         if (hidden.Count > 0)
@@ -66,10 +67,21 @@ public sealed class RevitTools(RevitBridgeClient bridge)
             InputSchema = c.InputSchema,
         }));
 
-        return new ListToolsResult { Tools = tools };
+        var result = new ListToolsResult { Tools = tools };
+        TokenMeter.RecordList(JsonSerializer.Serialize(tools.Select(t => new { t.Name, t.Description, t.InputSchema })), tools.Count);
+        return result;
     }
 
     public async Task<CallToolResult> CallAsync(McpServer server, string name, IDictionary<string, JsonElement>? arguments, CancellationToken token)
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var result = await CallCoreAsync(server, name, arguments, token);
+        TokenMeter.RecordCall(name, arguments == null ? null : JsonSerializer.Serialize(arguments),
+            string.Concat(result.Content.OfType<TextContentBlock>().Select(c => c.Text)), result.IsError == true, watch.ElapsedMilliseconds);
+        return result;
+    }
+
+    private async Task<CallToolResult> CallCoreAsync(McpServer server, string name, IDictionary<string, JsonElement>? arguments, CancellationToken token)
     {
         try
         {
@@ -81,6 +93,9 @@ public sealed class RevitTools(RevitBridgeClient bridge)
                     var reloaded = await bridge.SendAsync(BridgeProtocol.MethodReloadCommands, null, InvokeTimeout, token);
                     await server.SendNotificationAsync(NotificationMethods.ToolListChangedNotification, token);
                     return Json(reloaded);
+                case TokenMeter.ToolName:
+                    var days = arguments != null && arguments.TryGetValue("days", out var dv) && dv.ValueKind == JsonValueKind.Number ? dv.GetInt32() : 1;
+                    return Text(TokenMeter.Report(days), false);
                 case Knowledge.RevitApiSearch.ToolName:
                     var limit = arguments != null && arguments.TryGetValue("limit", out var l) && l.ValueKind == JsonValueKind.Number ? l.GetInt32() : 15;
                     return Text(await ApiSearch.RunAsync(Arg(arguments, "query"), Arg(arguments, "id"), Arg(arguments, "kind"), limit, token), false);

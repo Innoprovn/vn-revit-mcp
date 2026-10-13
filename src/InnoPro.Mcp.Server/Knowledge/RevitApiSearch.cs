@@ -20,7 +20,7 @@ public sealed partial class RevitApiSearch
     public const string Description =
         "Tra Revit API của bản Revit cài trên máy (2025/2026): lớp, hàm, thuộc tính, enum kèm mô tả và phiên bản có mặt. " +
         "Dùng TRƯỚC khi viết run_csharp để gọi đúng tên, đúng tham số. query bằng tiếng Anh: tên (\"NewDimension\", \"Rebar.GetFullGeometryForView\") " +
-        "hoặc từ khóa (\"dimension reference rebar\"); id để xem đầy đủ một mục (với lớp: liệt kê thành viên). Không cần mở Revit.";
+        "hoặc từ khóa (\"dimension reference rebar\"); id để xem đầy đủ một mục (với lớp: liệt kê thành viên, thêm query để chỉ lấy thành viên liên quan, đỡ token). Không cần mở Revit.";
 
     public static readonly System.Text.Json.JsonElement Schema = System.Text.Json.JsonDocument.Parse("""
         {
@@ -38,7 +38,7 @@ public sealed partial class RevitApiSearch
     {
         var items = await LoadAsync(token);
         if (items.Count == 0) return "Không thấy Revit 2025+ trên máy nên không tra được API.";
-        if (!string.IsNullOrWhiteSpace(id)) return Detail(items, id.Trim());
+        if (!string.IsNullOrWhiteSpace(id)) return Detail(items, id.Trim(), query);
         if (string.IsNullOrWhiteSpace(query)) return "Cần query hoặc id.";
         return Search(items, query, kind, Math.Clamp(limit <= 0 ? 15 : limit, 1, 60));
     }
@@ -126,7 +126,7 @@ public sealed partial class RevitApiSearch
         return sb.ToString().TrimEnd();
     }
 
-    private static string Detail(List<Item> items, string id)
+    private static string Detail(List<Item> items, string id, string? filter)
     {
         var it = items.FirstOrDefault(i => i.Id == id)
                  ?? items.FirstOrDefault(i => i.Kind == 'T' && (i.Id.EndsWith("." + id) || i.Id == id))
@@ -135,7 +135,10 @@ public sealed partial class RevitApiSearch
         var sb = new StringBuilder(Line(it, 1500)).Append('\n');
         if (it.Kind == 'T')
         {
-            var members = items.Where(i => i.Kind != 'T' && i.Type == it.Id).ToList();
+            var terms = filter == null ? [] : Words().Matches(filter).Select(m => m.Value).ToList();
+            var members = items.Where(i => i.Kind != 'T' && i.Type == it.Id)
+                .Where(i => terms.Count == 0 || terms.Any(t => i.Signature.Contains(t, StringComparison.OrdinalIgnoreCase) || i.Doc.Contains(t, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
             sb.Append($"Thành viên ({members.Count}):\n");
             foreach (var m in members.OrderBy(m => "CPMEF".IndexOf(m.Kind)).ThenBy(m => m.Member).Take(150))
                 sb.Append($"{m.Kind} {m.Signature}{(m.Years.Contains(',') ? "" : $" [{m.Years}]")}\n");
