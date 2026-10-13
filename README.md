@@ -23,7 +23,7 @@ AI tự cài, tự kiểm tra bằng `vn-revit-mcp doctor` và tự sửa nếu 
 
 Hoặc tự cài:
 
-mở **PowerShell** và chạy (không cần quyền admin, Revit đang mở cũng được):
+mở **PowerShell** và chạy (không cần quyền admin; Revit đang mở thì lần đầu mở lại Revit để có tab InnoPro):
 
 ```powershell
 irm https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/install.ps1 | iex
@@ -51,7 +51,7 @@ Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md
 | Hộp thoại "Load Once" của Revit | Bộ cài ghi sẵn lựa chọn *Always Load* cho vn-revit-mcp nên Revit không hỏi. Muốn Revit hỏi: cài với `-NoTrust`. Ký số: [chính sách](docs/code-signing-policy.md) |
 
 AI client khác: khai báo MCP server kiểu **stdio**, command `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe`.
-Mở nhiều Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
+Mở nhiều Revit cùng lúc: AI tự làm việc với Revit bạn thao tác gần nhất; muốn đổi thì nói với AI (vd "làm trên Revit 2025").
 
 ## Có những gì (100+ lệnh)
 
