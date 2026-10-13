@@ -15,6 +15,9 @@
     try {
         Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $file
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $file
+        # Exit code for AI agents: 0 = installed, non-zero = failed (details printed above).
+        if ($LASTEXITCODE -ne 0) { Write-Warning ('vn-revit-mcp: install failed (exit code ' + $LASTEXITCODE + ')') }
+        $global:LASTEXITCODE = $LASTEXITCODE
     }
     catch {
         Write-Warning ('vn-revit-mcp: ' + $_.Exception.Message)

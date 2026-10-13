@@ -12,8 +12,13 @@ If the user asks to install / connect Revit MCP, vn-revit-mcp, or "AI cho Revit"
    (Claude Desktop, Claude Code, Cursor, VS Code Copilot, Windsurf, Gemini CLI, LM Studio, Codex CLI, Cline).
 2. Verify and self-fix. Run:
    `& "$env:LOCALAPPDATA\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe" doctor --json`
-   Each failing check has a `fix` field (a command or a plain instruction). Apply fixes, run doctor again until `"ok": true`.
+   Exit code 0 = all good, 3 = some checks failed (the JSON is still valid). Each failing check has a `fix`:
+   a command you can run, or text starting with `NGƯỜI DÙNG:` that only the user can do (e.g. restart Revit).
+   Run the commands, re-run doctor once; then pass the remaining `NGƯỜI DÙNG` items to the user. Do not loop on them.
 3. Tell the user to restart Revit (add-ins load at startup) and restart their AI client, then open a project in Revit.
+
+The installer exits non-zero on failure (details are printed). It is safe to run inside MSIX/Store AI apps:
+it detects app virtualization and re-runs itself outside through Explorer.
 
 Manual MCP config for any other client: stdio, command
 `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe` (no arguments).
@@ -21,8 +26,7 @@ Manual MCP config for any other client: stdio, command
 Claude Desktop users without a terminal: download `vn-revit-mcp-<version>.mcpb` from
 https://github.com/Innoprovn/vn-revit-mcp/releases and double-click it.
 
-Requirements: Windows 10/11, Revit 2025 or newer (.NET 8 runtime ships with Revit). Works when the AI client is an
-MSIX/Store app (the installer escapes app virtualization automatically).
+Requirements: Windows 10/11, Revit 2025 or newer (.NET 8 runtime ships with Revit).
 
 ## Using it
 

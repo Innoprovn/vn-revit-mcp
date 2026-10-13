@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -58,9 +58,20 @@ internal static class Doctor
                 : new Check($"addin_manifest_{year}", false, $"Revit {year}: file khai báo trỏ tới DLL không tồn tại ({assembly}).", InstallCommand));
         }
 
-        // Chạy trong ứng dụng MSIX (chỉ để biết; bộ cài đã tự xử lý)
-        if (BundleInstaller.InPackage())
-            checks.Add(new Check("msix", true, "Đang chạy trong ứng dụng MSIX; bộ cài tự chạy ở ngoài qua Explorer."));
+        // Bản cài lọt vào vùng ảo hoá của một ứng dụng MSIX (Revit không thấy): tìm thật trong Packages\*\LocalCache.
+        var packages = Path.Combine(paths.LocalAppData, "Packages");
+        var trapped = !Directory.Exists(packages) ? [] : Directory.EnumerateDirectories(packages)
+            .SelectMany(p => new[]
+            {
+                Path.Combine(p, "LocalCache", "Local", "InnoPro", "vn-revit-mcp"),
+                Path.Combine(p, "LocalCache", "Roaming", "Autodesk", "Revit", "Addins"),
+            })
+            .Where(d => Directory.Exists(d) && (d.EndsWith("vn-revit-mcp") || Directory.EnumerateFiles(d, "InnoPro.VnRevitMcp.addin", SearchOption.AllDirectories).Any()))
+            .ToList();
+        checks.Add(trapped.Count == 0
+            ? new Check("msix", true, "Không có bản cài nào bị kẹt trong vùng ảo hoá của ứng dụng MSIX.")
+            : new Check("msix", false, "Có bản cài bị kẹt trong vùng ảo hoá của ứng dụng (Revit không thấy): " + string.Join("; ", trapped),
+                "Chạy lại lệnh cài trong PowerShell mở từ menu Start (không chạy bên trong ứng dụng AI): " + InstallCommand));
 
         // Revit đang mở và cầu nối trả lời
         var pids = RevitBridgeClient.FindRevitProcesses();
@@ -68,7 +79,7 @@ internal static class Doctor
         {
             var revitRunning = Process.GetProcessesByName("Revit").Length > 0;
             checks.Add(revitRunning
-                ? new Check("bridge", false, "Revit đang mở nhưng add-in chưa bật cầu nối.", "Đóng rồi mở lại Revit (add-in mới cài chỉ nạp khi Revit khởi động); kiểm tra nút MCP trên tab InnoPro đang bật.")
+                ? new Check("bridge", false, "Revit đang mở nhưng add-in chưa bật cầu nối.", "NGƯỜI DÙNG: đóng rồi mở lại Revit (add-in mới cài chỉ nạp khi Revit khởi động); kiểm tra nút MCP trên tab InnoPro đang bật.")
                 : new Check("bridge", true, "Revit chưa mở; mở Revit để AI điều khiển được."));
         }
         foreach (var pid in pids)
@@ -83,7 +94,7 @@ internal static class Doctor
                     && Version.TryParse(FileVersionInfo.GetVersionInfo(addinDll).FileVersion, out var installedNow) && running < installedNow)
                     checks.Add(new Check($"addin_outdated_{pid}", false,
                         $"Revit PID {pid} đang chạy add-in {running.ToString(3)}, bản đã cài là {installedNow.ToString(3)}.",
-                        "Đóng rồi mở lại Revit để dùng bản mới."));
+                        "NGƯỜI DÙNG: đóng rồi mở lại Revit để dùng bản mới (AI không tự làm)."));
                 checks.Add(new Check($"bridge_{pid}", errors == 0,
                     $"{r.GetProperty("revit_version").GetString()}, add-in {r.GetProperty("addin_version").GetString()}, " +
                     $"{r.GetProperty("command_count").GetInt32()} lệnh, tài liệu: {active ?? "chưa mở"}" + (errors > 0 ? $", {errors} lỗi nạp lệnh" : ""),

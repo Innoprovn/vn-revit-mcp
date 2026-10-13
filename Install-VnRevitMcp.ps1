@@ -271,22 +271,29 @@ function Invoke-Outside([string]$Script, [string[]]$Arguments) {
     Start-Process explorer.exe -ArgumentList "`"$cmd`""
     $deadline = (Get-Date).AddMinutes(15)
     while ((Get-Date) -lt $deadline -and -not ((Test-Path $log) -and (Select-String -Path $log -Pattern '__VN_REVIT_MCP_DONE__' -Quiet))) { Start-Sleep -Seconds 2 }
-    if (Test-Path $log) { Get-Content $log -Encoding UTF8 | Where-Object { $_ -notmatch '__VN_REVIT_MCP_DONE__' } | ForEach-Object { Write-Host $_ } }
+    $ok = $false
+    if (Test-Path $log) {
+        $lines = Get-Content $log -Encoding UTF8 | Where-Object { $_ -notmatch '__VN_REVIT_MCP_DONE__' }
+        $lines | ForEach-Object { Write-Host $_ }
+        $ok = -not ($lines -match 'Cài đặt thất bại')
+    }
     else { Write-Warning "Không thấy kết quả. Hãy chạy trực tiếp trong PowerShell: $Script $argText" }
     Remove-Item $cmd, $log -ErrorAction SilentlyContinue
+    return $ok
 }
 
 # Bọc trong hàm để chạy được qua "irm | iex" mà không đóng cửa sổ PowerShell khi lỗi.
 # Chỉ dùng exit khi chạy từ file (-File hoặc & Install-VnRevitMcp.ps1); chạy qua iex thì exit sẽ đóng cửa sổ.
-$scriptFile = if ($MyInvocation.MyCommand.Name -eq "Install-VnRevitMcp.ps1") { $MyInvocation.MyCommand.Path }
+# Chạy từ file (kể cả file tạm do install.ps1 tải về) thì có đường dẫn; chạy qua "irm | iex" thì rỗng.
+$scriptFile = $PSCommandPath
 try {
     if ($scriptFile -and -not $env:VN_REVIT_MCP_OUTSIDE -and (Test-InPackage)) {
         $forward = @()
         if ($Source) { $forward += "-Source", $Source }
         if ($Version) { $forward += "-Version", $Version }
         if ($NoClients) { $forward += "-NoClients" }
-        Invoke-Outside $scriptFile $forward
-        exit 0
+        $ok = Invoke-Outside $scriptFile $forward
+        exit $(if ($ok) { 0 } else { 1 })
     }
     Install-VnRevitMcp -Source $Source -Version $Version -NoClients:$NoClients
     if ($scriptFile) { exit 0 }
