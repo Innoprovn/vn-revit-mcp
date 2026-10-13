@@ -117,6 +117,12 @@ internal static class Doctor
         if (clients.Count == 0)
             checks.Add(new Check("clients", true, "Chưa thấy AI client nào trên máy (Claude, Cursor, VS Code...)."));
 
+        // Tự cập nhật
+        var (lastCheck, lastUpdate) = SelfUpdater.Status();
+        checks.Add(new Check("auto_update", true, SelfUpdater.Disabled
+            ? "Tự cập nhật đang tắt (VN_REVIT_MCP_AUTO_UPDATE=0); cập nhật tay: vn-revit-mcp.exe update"
+            : $"Tự cập nhật: bật, kiểm tra lần cuối {lastCheck ?? "chưa"}" + (lastUpdate != null ? $"; lần cập nhật gần nhất: {lastUpdate}" : "")));
+
         var ok = checks.All(c => c.Ok);
         if (json)
         {

@@ -77,6 +77,8 @@ public sealed class RevitTools(RevitBridgeClient bridge)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var result = await CallCoreAsync(server, name, arguments, token);
+        if (SelfUpdater.TakeNotice() is { } notice)
+            result.Content.Add(new TextContentBlock { Text = notice + " Hãy báo người dùng." });
         TokenMeter.RecordCall(name, arguments == null ? null : JsonSerializer.Serialize(arguments),
             string.Concat(result.Content.OfType<TextContentBlock>().Select(c => c.Text)), result.IsError == true, watch.ElapsedMilliseconds,
             result.Content.OfType<ImageContentBlock>().Sum(i => TokenMeter.ImageTokens(i.DecodedData.Span)));

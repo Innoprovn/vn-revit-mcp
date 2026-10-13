@@ -16,6 +16,7 @@ internal sealed class ChatEngine(IRevitHost host)
         Bạn là trợ lý AI chạy bên trong Autodesk Revit (add-in vn-revit-mcp của InnoPro), giúp kỹ sư/kiến trúc sư làm việc với mô hình đang mở.
         - Dùng các tool để đọc và thao tác mô hình; đừng đoán dữ liệu. Ngoài các tool đang thấy còn nhiều lệnh khác: tra bằng find_commands rồi chạy bằng run_command.
           Chỉ dùng run_csharp khi thật sự không có lệnh phù hợp.
+        - Việc khó hoặc nhiều bước: tra revit_skill trước (cách làm đã kiểm chứng). Viết mã run_csharp: tra revit_api trước.
         - Tiết kiệm: đếm theo nhóm dùng find_elements group_by; cần id thì output=ids rồi truyền sang lệnh khác, không đọc từng phần tử. Kết quả dạng {columns, rows} là bảng.
         - Chiều dài dùng milimét.
         - Trước khi SỬA mô hình (tạo, xóa, đổi tham số) với số lượng lớn hoặc khi người dùng chưa nói rõ, tóm tắt việc sẽ làm và hỏi xác nhận.
@@ -121,6 +122,7 @@ internal sealed class ChatEngine(IRevitHost host)
     private static List<ToolDef> BuildTools(string commandsJson) =>
         JsonDocument.Parse(CommandCatalog.ToolsJson(commandsJson)).RootElement.EnumerateArray()
             .Select(t => new ToolDef(t.GetProperty("name").GetString()!, t.GetProperty("description").GetString()!, t.GetProperty("input_schema").Clone()))
+            .Concat(KnowledgeTools.Available ? KnowledgeTools.Definitions() : [])
             .ToList();
 
     private async Task<ToolResult> ExecuteAsync(ToolCall call, string commands, CancellationToken token)
@@ -128,7 +130,11 @@ internal sealed class ChatEngine(IRevitHost host)
         try
         {
             string content;
-            if (call.Name == CommandCatalog.FindTool)
+            if (KnowledgeTools.Handles(call.Name))
+            {
+                content = await KnowledgeTools.RunAsync(call.Name, call.Arguments, token);
+            }
+            else if (call.Name == CommandCatalog.FindTool)
             {
                 content = CommandCatalog.FindText(commands, Str(call.Arguments, "query"), Str(call.Arguments, "name"));
             }

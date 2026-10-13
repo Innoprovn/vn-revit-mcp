@@ -36,6 +36,8 @@ Requirements: Windows 10/11, Revit 2025 or newer (.NET 8 runtime ships with Revi
   (type/family/level/category), `fields` (parameter values; lengths in mm, areas in m²).
 - Results like `{columns, rows}` are tables. Lengths are millimetres.
 - Modifying commands are undoable (Ctrl+Z in Revit).
+- Updates are automatic (server and add-in check GitHub at most every 12 h, SHA-256 verified; marketplace extensions too).
+  Force now: `vn-revit-mcp.exe update`. Disable: env `VN_REVIT_MCP_AUTO_UPDATE=0`. Do not reinstall just to update.
 
 ## Docs
 

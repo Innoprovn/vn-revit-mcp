@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using InnoPro.Mcp.Server;
 using InnoPro.Mcp.Server.Setup;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +9,8 @@ using ModelContextProtocol.Protocol;
 
 // "vn-revit-mcp setup|unsetup|clients": cấu hình các AI client trên máy, không chạy MCP server.
 if (SetupCli.IsSetupCommand(args)) { Environment.ExitCode = SetupCli.Run(args); return; }
+// "vn-revit-mcp skill|api": tra kỹ năng / Revit API (chat trong Revit dùng).
+if (KnowledgeCli.IsKnowledgeCommand(args)) { Environment.ExitCode = await KnowledgeCli.RunAsync(args); return; }
 
 // Chạy từ gói .mcpb: tự cài/cập nhật add-in Revit mang theo trong gói (chạy nền).
 args = BundleInstaller.TakeBundleArg(args, out var bundleDir);
@@ -19,7 +21,11 @@ var builder = Host.CreateApplicationBuilder(args);
 // stdout là kênh MCP, mọi log phải ra stderr.
 builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 
-var tools = new RevitTools(new RevitBridgeClient());
+var bridge = new RevitBridgeClient();
+var tools = new RevitTools(bridge);
+
+// Tự cập nhật (chạy nền, tối đa 12 giờ/lần). Tắt: VN_REVIT_MCP_AUTO_UPDATE=0.
+SelfUpdater.StartInBackground(bridge);
 
 builder.Services
     .AddMcpServer(options =>

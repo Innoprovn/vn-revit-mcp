@@ -11,7 +11,7 @@ namespace InnoPro.Mcp.Server.Setup;
 /// </summary>
 public static class SetupCli
 {
-    private static readonly string[] Commands = ["setup", "unsetup", "clients", "doctor"];
+    private static readonly string[] Commands = ["setup", "unsetup", "clients", "doctor", "update"];
 
     public static bool IsSetupCommand(string[] args) =>
         args.Length > 0 && Commands.Contains(args[0], StringComparer.OrdinalIgnoreCase);
@@ -51,6 +51,7 @@ public static class SetupCli
           vn-revit-mcp.exe unsetup [--clients a,b|all] [--dry-run] [--home <thư mục>] [--json]
           vn-revit-mcp.exe clients [--home <thư mục>] [--json]
           vn-revit-mcp.exe doctor  [--json]      kiểm tra cài đặt, Revit, AI client; mục lỗi kèm cách sửa
+          vn-revit-mcp.exe update  [--auto]     (--auto: theo lịch 12 giờ, như khi Revit khởi động) cập nhật ngay bản mới nhất (server, add-in, tiện ích)
         Mã client: claude-desktop, claude-code, cursor, vscode, vscode-insiders, windsurf, gemini, lmstudio, codex, cline
         """;
 
@@ -61,6 +62,7 @@ public static class SetupCli
         public bool DryRun;
         public bool Json;
         public bool Help;
+        public bool Auto;
         public string? Home;
         public string? ServerCommand;
     }
@@ -82,6 +84,7 @@ public static class SetupCli
                     break;
                 case "--dry-run": options.DryRun = true; break;
                 case "--json": options.Json = true; break;
+                case "--auto": options.Auto = true; break;
                 case "--home": options.Home = Next(); break;
                 case "--command": options.ServerCommand = Path.GetFullPath(Next()); break;
                 case "-h" or "--help" or "/?": options.Help = true; break;
@@ -103,6 +106,19 @@ public static class SetupCli
         var clients = McpClient.All.Where(c => options.Clients == null || options.Clients.Contains(c.Id)).ToList();
 
         if (options.Command == "doctor") return Doctor.Run(paths, options.Json);
+        if (options.Command == "update")
+        {
+            try
+            {
+                Console.WriteLine(SelfUpdater.CheckAsync(new RevitBridgeClient(), force: !options.Auto).GetAwaiter().GetResult());
+                return 0;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException or InvalidDataException or TaskCanceledException)
+            {
+                Console.Error.WriteLine("Không cập nhật được: " + ex.Message);
+                return 4;
+            }
+        }
 
         if (options.Command == "clients")
         {

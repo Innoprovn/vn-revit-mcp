@@ -51,6 +51,7 @@ public sealed class App : IExternalApplication
             _dispatcher = new RevitDispatcher();
             Bridge = new PipeBridge(() => _registry, ReloadCommands, _dispatcher, Status, () => HasOpenDocument);
             Bridge.Start();
+            StartAutoUpdate();
 
             ChatHost = new ChatHost(this, _dispatcher);
             ChatPane.EnsureLoaded(ChatHost);
@@ -73,6 +74,25 @@ public sealed class App : IExternalApplication
             Log.Error("Khởi động thất bại", ex);
             return Result.Failed;
         }
+    }
+
+    /// <summary>
+    /// Người dùng chỉ mở Revit (không mở AI) vẫn được cập nhật: gọi "vn-revit-mcp.exe update --auto" chạy ẩn.
+    /// Server tự giãn cách 12 giờ/lần và tôn trọng VN_REVIT_MCP_AUTO_UPDATE=0; bản mới có hiệu lực lần mở Revit sau.
+    /// </summary>
+    private static void StartAutoUpdate()
+    {
+        try
+        {
+            var addinDir = Path.GetDirectoryName(typeof(App).Assembly.Location)!;
+            var exe = Path.GetFullPath(Path.Combine(addinDir, "..", "server", "vn-revit-mcp.exe"));
+            if (!File.Exists(exe)) return; // bản build của lập trình viên
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, "update --auto")
+            {
+                UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = Path.GetDirectoryName(exe)!,
+            })?.Dispose();
+        }
+        catch (Exception ex) { Log.Error("Không chạy được tự cập nhật", ex); }
     }
 
     public Result OnShutdown(UIControlledApplication application)

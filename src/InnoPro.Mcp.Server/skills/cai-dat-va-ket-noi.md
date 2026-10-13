@@ -9,3 +9,8 @@ verified: Windows 11, Claude Code MSIX, 13/10/2026
   mục "NGƯỜI DÙNG:" (mở lại Revit...) thì báo người dùng.
 - revit_status lỗi kết nối: Revit chưa mở dự án, hoặc đang bận (hộp thoại, add-in khác chạy việc nặng).
 - Nhiều phiên Revit: đặt biến môi trường VN_REVIT_MCP_PID cho MCP server.
+
+## Cập nhật
+- Tự động: server (khi AI mở) và add-in (khi Revit mở) kiểm tra GitHub tối đa 12 giờ/lần, tải gói, kiểm SHA-256, cài bằng bộ cài. Tiện ích marketplace đã cài cũng tự lên bản mới và nạp lại ngay.
+- Add-in mới có hiệu lực khi mở lại Revit; server mới khi mở lại ứng dụng AI. Khi vừa cập nhật, kết quả tool kèm dòng "vn-revit-mcp vừa tự cập nhật": báo người dùng.
+- Cập nhật ngay: `vn-revit-mcp.exe update`. Xem tình trạng: `vn-revit-mcp.exe doctor` (mục "Tự cập nhật"). Tắt: biến môi trường `VN_REVIT_MCP_AUTO_UPDATE=0`.

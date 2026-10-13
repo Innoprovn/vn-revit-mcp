@@ -42,7 +42,7 @@ Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md
 | Việc | Cách làm |
 |---|---|
 | Kết nối thêm AI client | nút **Hệ thống → Kết nối AI** trong Revit |
-| Cập nhật | nút **Hệ thống → Cập nhật**, hoặc chạy lại lệnh cài |
+| Cập nhật | **tự động**: mỗi khi mở Revit hoặc AI, tối đa 12 giờ/lần (kiểm SHA-256, tiện ích marketplace cũng tự lên bản mới). Cập nhật ngay: `vn-revit-mcp.exe update`. Tắt: biến môi trường `VN_REVIT_MCP_AUTO_UPDATE=0` |
 | Gỡ cài đặt | `uninstall.ps1` trong file zip (thêm `-Purge` để xóa cả lệnh tự thêm) |
 
 AI client khác: khai báo MCP server kiểu **stdio**, command `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe`.
@@ -126,7 +126,7 @@ Chỉ khi sửa phần lõi (Addin, Sdk, Bridge) mới cần chạy lại `insta
 | P0 | Add-in, tab InnoPro, cầu nối, MCP server | ✅ |
 | P1 | CommandSet Core, QA-QC, Modeling, Data, Code; lệnh từ file `.cs`; nút và form tự sinh; tiết kiệm token | ✅ (đang mở rộng) |
 | P2 | Khung chat trong Revit đa nhà cung cấp | ✅ bản đầu |
-| P3 | Bộ cài một dòng, tự cấu hình AI client; phát hành GitHub, MCP Registry, tự cập nhật | 🔄 |
+| P3 | Bộ cài một dòng, tự cấu hình AI client; phát hành GitHub, MCP Registry, tự cập nhật | ✅ |
 | P4 | Bộ lệnh chuyên sâu (Kết cấu, Rebar, Bản vẽ, vẽ từ CAD); cửa hàng lệnh cộng đồng | ⏳ |
 
 ## Đóng góp
