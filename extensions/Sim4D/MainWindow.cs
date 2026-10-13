@@ -792,7 +792,9 @@ namespace BIMTech4D
             {
                 _carry -= step;
                 if (_cur < _max) { GoTo(_cur.AddDays(step)); return; }
-                if (!cam) { StopPlay(); return; } // có camera thì hết tiến độ vẫn bay vòng cho tới khi bấm dừng
+                StopPlay();                       // hết tiến độ thì dừng (kể cả khi camera bay quanh), giữ ngày cuối
+                Status("Đã chạy hết tiến độ. Bấm ▶ để chạy lại từ đầu.");
+                return;
             }
             if (cam) RequestApply();
         }

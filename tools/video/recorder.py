@@ -385,6 +385,28 @@ def write_ass(ass, w, h, title, steps, clicks):
     open(ass, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 
 
+_frames = {}
+
+
+def sample_color(raw, t, x, y, w, h, fw, fh):
+    """Màu trung bình của các điểm ngay bên ngoài khung (x, y, w, h) trong khung hình thứ t giây của bản quay thô."""
+    key = round(t, 1)
+    if key not in _frames:
+        _frames[key] = subprocess.run([FFMPEG, "-loglevel", "error", "-ss", f"{t:.2f}", "-i", raw, "-frames:v", "1",
+                                       "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True).stdout
+    data = _frames[key]
+    pts = [(x - 2, y + h // 2), (x + w + 1, y + h // 2), (x + w // 2, y - 2), (x + w // 2, y + h + 1),
+           (x - 2, y + 1), (x + w + 1, y + h - 2)]
+    acc, n = [0, 0, 0], 0
+    for px, py in pts:
+        if 0 <= px < fw and 0 <= py < fh and len(data) >= fw * fh * 3:
+            i = (py * fw + px) * 3
+            for c in range(3): acc[c] += data[i + c]
+            n += 1
+    if n == 0: return "0xF0F0F0"
+    return "0x" + "".join(f"{v // n:02X}" for v in acc)
+
+
 def render(raw, ass, out, masks, w, h):
     """Dựng video cuối từ bản quay thô + phụ đề ASS. Dựng lại riêng: python recorder.py --render ra.mp4 [--ass]"""
     esc = ass.replace("\\", "/").replace(":", "\\:")
@@ -399,19 +421,29 @@ def render(raw, ass, out, masks, w, h):
         elif m.get("kind") == "delogo":
             chain.append(f"[{last}]delogo=x={mx}:y={my}:w={mw}:h={mh}{enable}[v{k}]")
         else:
-            lr = max(1, min(10, mh // 2 - 1)); cr = max(1, min(lr, mh // 4 - 1))
-            chain.append(f"[{last}]split[b{k}][c{k}];[c{k}]crop={mw}:{mh}:{mx}:{my},boxblur={lr}:3:{cr}:3[m{k}];"
-                         f"[b{k}][m{k}]overlay={mx}:{my}{enable}[v{k}]")
+            # Che chữ bằng hộp cùng màu nền xung quanh (lấy mẫu từ khung hình lúc vùng che bắt đầu): nhìn như nhãn bị xoá,
+            # nhanh hơn nhiều so với làm mờ (chuỗi split/boxblur/overlay chậm hàng chục lần).
+            color = sample_color(raw, (a or 0) + 0.5, mx, my, mw, mh, w, h)
+            chain.append(f"[{last}]drawbox=x={mx}:y={my}:w={mw}:h={mh}:color={color}:t=fill{enable}[v{k}]")
         last = f"v{k}"
     chain.append(f"[{last}]pad={w}:{max(h, 1080)}:0:0:black,ass='{esc}'[out]")
     script = out + ".filter.txt"
     open(script, "w", encoding="utf-8").write(";".join(chain))
     subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-i", raw, "-/filter_complex", script, "-map", "[out]",
-                    "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out], check=True)
+                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out], check=True)
     os.remove(script)
 
 
+def cut(src, dst, ranges):
+    """Cắt bỏ các đoạn [(a, b), ...] (giây) khỏi video đã dựng (hậu kỳ: bỏ lúc chờ, đoạn mô phỏng lặp...)."""
+    keep = "+".join(f"between(t,{a},{b})" for a, b in ranges)
+    subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-i", src, "-vf", f"select='not({keep})',setpts=N/FRAME_RATE/TB",
+                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart", dst], check=True)
+
+
 def main():
+    if sys.argv[1] == "--cut":                          # python recorder.py --cut vao.mp4 ra.mp4 42-62 153.5-159.5
+        cut(sys.argv[2], sys.argv[3], [tuple(map(float, x.split("-"))) for x in sys.argv[4:]]); print(sys.argv[3]); return
     if sys.argv[1] == "--render":                       # dựng lại sau khi sửa vùng che/phụ đề trong .json (--ass) hoặc .ass
         out = os.path.abspath(sys.argv[2]); meta = json.load(open(out + ".json", encoding="utf-8"))
         w, h = meta["region"][2], meta["region"][3]
