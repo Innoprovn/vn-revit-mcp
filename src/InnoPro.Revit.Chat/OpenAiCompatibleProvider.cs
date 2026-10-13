@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -25,9 +25,15 @@ internal sealed class OpenAiCompatibleProvider : IChatProvider
         _baseUrl = baseUrl.TrimEnd('/');
         _apiKey = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey;
         _model = model;
+        _isLocal = Uri.TryCreate(_baseUrl, UriKind.Absolute, out var uri) && (uri.IsLoopback || uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase));
     }
 
+    private readonly bool _isLocal;
+
     public void Reset() => _messages.Clear();
+
+    /// <summary>Máy chủ trên máy (Ollama, LM Studio, llama.cpp) thường chạy mô hình nhỏ, ngữ cảnh 8K–32K.</summary>
+    public int MaxToolResultChars => _isLocal ? 4000 : 20000;
 
     public async Task<TurnResult> SendAsync(string? userText, IReadOnlyList<ToolResult>? toolResults, IReadOnlyList<ToolDef> tools,
         string system, CancellationToken token)

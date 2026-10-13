@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -304,7 +304,7 @@ internal sealed class ChatView : UserControl
             {
                 switch (kind)
                 {
-                    case "assistant": AddBubble(content, user: false); break;
+                    case "assistant": AddBubble(PlainText.From(content), user: false); break;
                     case "tool": AddLine("· " + content, Theme.Muted); break;
                     case "tool_error": AddLine("! " + content, Theme.Danger); break;
                 }

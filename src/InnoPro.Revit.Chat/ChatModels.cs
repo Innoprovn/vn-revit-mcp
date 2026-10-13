@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace InnoPro.Revit.Chat;
 
@@ -24,6 +24,9 @@ internal interface IChatProvider
         string system, CancellationToken token);
 
     Task<IReadOnlyList<string>> ListModelsAsync(CancellationToken token);
+
+    /// <summary>Độ dài tối đa của một kết quả lệnh gửi lại mô hình. Mô hình chạy trên máy có ngữ cảnh nhỏ.</summary>
+    int MaxToolResultChars => 20000;
 }
 
 /// <summary>Lỗi có thông điệp hiển thị cho người dùng.</summary>
