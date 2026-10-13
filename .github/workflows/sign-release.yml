@@ -1,0 +1,104 @@
+name: Ký số bản phát hành (SignPath)
+
+# Ký số miễn phí qua SignPath Foundation (dành cho dự án mã nguồn mở), xem docs/code-signing-policy.md.
+# Workflow này NGỦ cho tới khi khai báo biến repo SIGNPATH_ORGANIZATION_ID và secret SIGNPATH_API_TOKEN
+# (Settings → Secrets and variables → Actions). Khi bật:
+#   build trên GitHub → gửi DLL/EXE của InnoPro sang SignPath ký → đóng gói lại → thay zip và .mcpb trong release
+#   → cập nhật server.json (SHA-256 mới) và đăng MCP Registry (workflow publish-mcp-registry tự nhường).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag cần ký lại, vd v0.7.1"
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+  actions: read
+
+jobs:
+  sign:
+    if: vars.SIGNPATH_ORGANIZATION_ID != '' && (github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v'))
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1
+
+      - name: Gom file cần ký
+        shell: powershell
+        run: |
+          # Chỉ ký file do InnoPro build (thư viện bên thứ ba như Roslyn đã có chữ ký của họ).
+          $out = "to-sign"
+          Get-ChildItem artifacts -Recurse -File | Where-Object { ($_.Name -like "InnoPro.*" -or $_.Name -like "vn-revit-mcp.*") -and $_.Extension -in ".dll", ".exe" } | ForEach-Object {
+            $rel = $_.FullName.Substring((Resolve-Path artifacts).Path.Length + 1)
+            $dest = Join-Path $out $rel
+            New-Item -ItemType Directory -Force (Split-Path $dest) | Out-Null
+            Copy-Item $_.FullName $dest
+          }
+
+      - name: Tải lên để ký
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned
+          path: to-sign
+
+      - name: Ký qua SignPath
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'vn-revit-mcp' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIG || 'initial' }}
+          github-artifact-id: ${{ steps.upload.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Đóng gói lại với file đã ký
+        shell: powershell
+        run: |
+          Copy-Item signed\* artifacts -Recurse -Force
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts\package.ps1 -SkipBuild
+
+      - name: Thay file trong release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = $env:TAG.TrimStart('v')
+          gh release upload $env:TAG "artifacts\release\vn-revit-mcp-$v-win-x64.zip" "artifacts\release\vn-revit-mcp-$v.mcpb" --clobber
+
+      - name: Cập nhật server.json
+        shell: powershell
+        run: |
+          git config user.name "InnoPro"
+          git config user.email "innopro@innopro.vn"
+          # package.ps1 vừa ghi server.json với SHA-256 của gói đã ký: đưa file đó lên main.
+          Copy-Item server.json "$env:RUNNER_TEMP\server.json"
+          git fetch origin main
+          git checkout -B main origin/main
+          Copy-Item "$env:RUNNER_TEMP\server.json" server.json -Force
+          if (git status --porcelain server.json) { git add server.json; git commit -m "server.json: SHA-256 gói đã ký $env:TAG"; git push origin main }
+
+      - name: Cài mcp-publisher
+        shell: bash
+        run: curl -sL "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_windows_amd64.tar.gz" | tar xz mcp-publisher.exe
+
+      - name: Đăng MCP Registry
+        shell: bash
+        run: ./mcp-publisher.exe login github-oidc && ./mcp-publisher.exe publish

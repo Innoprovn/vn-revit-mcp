@@ -14,7 +14,8 @@ permissions:
 jobs:
   publish:
     # Chỉ bản phát hành vn-revit-mcp (tag v*), không chạy với release tiện ích (ext-*).
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
+    # Đã bật ký số (SIGNPATH_ORGANIZATION_ID) thì sign-release.yml đăng sau khi thay gói đã ký.
+    if: github.event_name == 'workflow_dispatch' || (startsWith(github.event.release.tag_name, 'v') && vars.SIGNPATH_ORGANIZATION_ID == '')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

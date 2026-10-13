@@ -37,6 +37,8 @@ function Uninstall-VnRevitMcp {
         $addins = Join-Path $env:APPDATA "Autodesk\Revit\Addins\$year"
         $file = Join-Path $addins "InnoPro.VnRevitMcp.addin"
         if (Test-Path $file) { Remove-Item $file -Force; Write-Host "Đã xóa $file" }
+        # Lựa chọn "Always Load" bộ cài đã ghi cho vn-revit-mcp.
+        Remove-ItemProperty -Path "HKCU:\Software\Autodesk\Revit\Autodesk Revit $year\CodeSigning" -Name "2c094443-bae5-4dad-83df-1df8dddf5c68" -ErrorAction SilentlyContinue
         $oldDev = Join-Path $addins "InnoPro.VnRevitMcp"
         if (Test-Path $oldDev) {
             try { Remove-Item $oldDev -Recurse -Force } catch { $problems += "Chưa xóa được $oldDev." }

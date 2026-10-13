@@ -48,6 +48,7 @@ Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md
 | Kết nối thêm AI client | nút **Hệ thống → Kết nối AI** trong Revit |
 | Cập nhật | **tự động**: mỗi khi mở Revit hoặc AI, tối đa 12 giờ/lần (kiểm SHA-256, tiện ích marketplace cũng tự lên bản mới). Cập nhật ngay: `vn-revit-mcp.exe update`. Tắt: biến môi trường `VN_REVIT_MCP_AUTO_UPDATE=0` |
 | Gỡ cài đặt | `uninstall.ps1` trong file zip (thêm `-Purge` để xóa cả lệnh tự thêm) |
+| Hộp thoại "Load Once" của Revit | Bộ cài ghi sẵn lựa chọn *Always Load* cho vn-revit-mcp nên Revit không hỏi. Muốn Revit hỏi: cài với `-NoTrust`. Ký số: [chính sách](docs/code-signing-policy.md) |
 
 AI client khác: khai báo MCP server kiểu **stdio**, command `%LOCALAPPDATA%\InnoPro\vn-revit-mcp\current\server\vn-revit-mcp.exe`.
 Mở nhiều Revit cùng lúc thì đặt biến môi trường `VN_REVIT_MCP_PID` để chọn phiên.
@@ -139,6 +140,9 @@ Lõi, SDK, Bridge, module chat cũng được nạp nóng (bộ nạp tự đổ
 Mọi người đều có thể đóng góp lệnh, CommandSet, công thức. Mở issue hoặc pull request.
 
 ## License
+
+Ký số miễn phí bởi [SignPath.io](https://about.signpath.io), chứng chỉ của [SignPath Foundation](https://signpath.org) (đang đăng ký) — [chính sách ký số](docs/code-signing-policy.md).
+
 
 [GPLv3](LICENSE) kèm [ngoại lệ plugin](LICENSE-EXCEPTION.md): CommandSet và file lệnh của bạn được giữ license riêng
 (kể cả đóng mã nguồn), và được phép chạy cùng Autodesk Revit.

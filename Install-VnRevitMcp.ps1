@@ -25,15 +25,18 @@
   Phiên bản cần tải (mặc định: mới nhất). Khi có -Source thì dùng làm tên phiên bản cài (ví dụ "dev").
 .PARAMETER NoClients
   Không tự kết nối AI client.
+.PARAMETER NoTrust
+  Không ghi sẵn "Always Load" cho vn-revit-mcp: Revit sẽ hỏi lần đầu mở (add-in chưa ký số).
 #>
 param(
     [string]$Source,
     [string]$Version,
-    [switch]$NoClients
+    [switch]$NoClients,
+    [switch]$NoTrust
 )
 
 function Install-VnRevitMcp {
-    param([string]$Source, [string]$Version, [switch]$NoClients)
+    param([string]$Source, [string]$Version, [switch]$NoClients, [switch]$NoTrust)
 
     $ErrorActionPreference = "Stop"
     $ProgressPreference = "SilentlyContinue"
@@ -180,6 +183,17 @@ function Install-VnRevitMcp {
             }
         }
 
+        # 6b. Add-in chưa ký số: Revit hỏi "Always Load / Load Once" lần đầu mở. Người dùng đã chủ động cài add-in này,
+        # nên ghi sẵn lựa chọn "Always Load" (đúng giá trị Revit tự ghi khi bấm nút đó), chỉ cho vn-revit-mcp. -NoTrust để bỏ qua.
+        if (-not $NoTrust) {
+            foreach ($year in $years) {
+                $key = "HKCU:\Software\Autodesk\Revit\Autodesk Revit $year\CodeSigning"
+                New-Item -Path $key -Force -ErrorAction SilentlyContinue | Out-Null
+                New-ItemProperty -Path $key -Name "2c094443-bae5-4dad-83df-1df8dddf5c68" -Value 1 -PropertyType DWord -Force | Out-Null
+            }
+            Write-Host "Đã đặt Revit luôn nạp vn-revit-mcp (Always Load), không hỏi lại. Muốn Revit hỏi: cài với -NoTrust."
+        }
+
         # 7. Dọn các phiên bản cũ không còn được dùng
         Get-ChildItem $apps -Directory | Where-Object { $_.FullName -ne $target } | ForEach-Object {
             if (-not (Test-FolderInUse $_.FullName)) { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
@@ -293,10 +307,11 @@ try {
         if ($Source) { $forward += "-Source", $(if (Test-Path $Source) { (Resolve-Path $Source).Path } else { $Source }) }
         if ($Version) { $forward += "-Version", $Version }
         if ($NoClients) { $forward += "-NoClients" }
+        if ($NoTrust) { $forward += "-NoTrust" }
         $ok = Invoke-Outside $scriptFile $forward
         exit $(if ($ok) { 0 } else { 1 })
     }
-    Install-VnRevitMcp -Source $Source -Version $Version -NoClients:$NoClients
+    Install-VnRevitMcp -Source $Source -Version $Version -NoClients:$NoClients -NoTrust:$NoTrust
     if ($scriptFile) { exit 0 }
 }
 catch {
