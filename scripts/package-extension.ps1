@@ -59,7 +59,7 @@ Write-Host "Đã đóng gói: $zip ($($entry.size_kb) KB)" -ForegroundColor Gree
 if ($Publish) {
     $gh = (Get-Command gh -ErrorAction SilentlyContinue).Source
     if (-not $gh) { $gh = "C:\Program Files\GitHub CLI\gh.exe" }
-    & $gh release create $tag $zip --title "$($manifest.name) $version (tiện ích)" --notes "Tiện ích marketplace vn-revit-mcp. Cài trong Revit: Cửa hàng, hoặc nhờ AI: marketplace_install id=$Id." --target main
+    & $gh release create $tag $zip --title "$($manifest.name) $version (tiện ích)" --notes "Tiện ích marketplace vn-revit-mcp. Cài trong Revit: Cửa hàng, hoặc nhờ AI: marketplace_install id=$Id." --target main --latest=false
     $indexPath = Join-Path $root "community\index.json"
     $index = Get-Content $indexPath -Raw -Encoding UTF8 | ConvertFrom-Json
     $list = @($index.extensions | Where-Object { $_ -and $_.id -ne $Id }) + [pscustomobject]$entry
