@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -222,7 +222,8 @@ namespace BIMTech4D
                 Sim4D.Session = SimSession.Start(context.UIDocument, tasks.SelectMany(t => t.ElementIds).Distinct().ToList(), camera: false);
             var states = Sim.Compute(tasks, date);
             Sim4D.Session.Apply(states);
-            context.UIDocument.ActiveView = Sim4D.Session.View;
+            // Đổi view ngay trong lúc lệnh đang chạy có lúc bị Revit khoá: gửi yêu cầu, Revit đổi khi rảnh.
+            if (context.UIDocument.ActiveView.Id != Sim4D.Session.View.Id) context.UIDocument.RequestViewChange(Sim4D.Session.View);
 
             var active = tasks.Where(t => t.Start <= date && date <= t.End).Select(t => t.Name).ToList();
             return new
