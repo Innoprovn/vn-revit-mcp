@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -13,7 +13,10 @@ namespace InnoPro.Revit.Addin;
 /// </summary>
 internal static class Marketplace
 {
-    private const string IndexUrl = "https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/community/index.json";
+    // GitHub API trả nội dung mới nhất ngay sau khi push; raw.githubusercontent lưu tạm tới 5 phút nên chỉ để dự phòng
+    // (API giới hạn 60 lần/giờ mỗi IP khi không đăng nhập).
+    private const string ApiIndexUrl = "https://api.github.com/repos/Innoprovn/vn-revit-mcp/contents/community/index.json?ref=main";
+    private const string RawIndexUrl = "https://raw.githubusercontent.com/Innoprovn/vn-revit-mcp/main/community/index.json";
     private const string MarkerFile = ".marketplace.json";
 
     internal sealed record Extension(string Id, string Name, string Description, string Category, string Author,
@@ -33,7 +36,19 @@ internal static class Marketplace
 
     public static List<Extension> Fetch()
     {
-        var json = Http.GetStringAsync(IndexUrl + "?t=" + DateTime.UtcNow.Ticks / TimeSpan.TicksPerMinute).GetAwaiter().GetResult();
+        string json;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, ApiIndexUrl);
+            request.Headers.Accept.ParseAdd("application/vnd.github.raw+json");
+            using var response = Http.Send(request);
+            response.EnsureSuccessStatusCode();
+            json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        }
+        catch (HttpRequestException)
+        {
+            json = Http.GetStringAsync(RawIndexUrl).GetAwaiter().GetResult();
+        }
         using var doc = JsonDocument.Parse(json);
         if (!doc.RootElement.TryGetProperty("extensions", out var list)) return [];
         string S(JsonElement e, string k) => e.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString()! : "";
