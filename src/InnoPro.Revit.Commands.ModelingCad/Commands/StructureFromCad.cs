@@ -115,18 +115,14 @@ public sealed class PlaceColumnsFromCad : RevitCommandBase
 
         var summary = Column.ColumnPlacer.Place(doc, groups, level, top);
 
-        // Ghi tên: cột vừa tạo khớp với khung CAD có tâm gần nhất.
+        // Ghi tên: mỗi cột vừa tạo lấy tên của khung CAD sinh ra nó.
         var named = 0;
         var nameParameter = Args.GetStringOrDefault(arguments, "name_parameter", "Mark");
-        if (!string.IsNullOrEmpty(nameParameter) && names.Count > 0)
+        if (!string.IsNullOrEmpty(nameParameter))
         {
-            var tolerance = UnitConvert.MmToFeet(50);
-            foreach (var id in summary.CreatedIds)
+            foreach (var (source, id) in summary.CreatedFrom)
             {
-                if (doc.GetElement(id) is not FamilyInstance fi || fi.Location is not LocationPoint lp) continue;
-                var at = new XYZ(lp.Point.X, lp.Point.Y, 0);
-                var source = columns.FirstOrDefault(c => new XYZ(c.Center.X, c.Center.Y, 0).DistanceTo(at) <= tolerance);
-                if (source == null || NameOf(source) is not { } name) continue;
+                if (NameOf(source) is not { } name || doc.GetElement(id) is not FamilyInstance fi) continue;
                 var parameter = nameParameter == "Mark" ? fi.get_Parameter(BuiltInParameter.ALL_MODEL_MARK) : fi.LookupParameter(nameParameter);
                 if (parameter is { IsReadOnly: false, StorageType: StorageType.String } && parameter.Set(name)) named++;
             }

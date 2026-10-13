@@ -1,4 +1,4 @@
-using Autodesk.Revit.DB;
+﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 
 namespace InnoPro.Revit.Commands.ModelingCad.PlaceColumn;
@@ -150,6 +150,7 @@ internal static class ColumnPlacer
         var skipped = 0;
         var errors = new List<string>();
         var createdIds = new List<ElementId>();
+        var createdFrom = new List<(RawColumn Column, ElementId Id)>();
 
         var existingBoxesByFamily = new Dictionary<string, List<(PlanBox Box, ElementId Id)>>(StringComparer.Ordinal);
 
@@ -201,7 +202,10 @@ internal static class ColumnPlacer
                 {
                     created++;
                     if (result.CreatedId is not null)
+                    {
                         createdIds.Add(result.CreatedId);
+                        createdFrom.Add((column, result.CreatedId));
+                    }
                 }
                 else
                 {
@@ -213,7 +217,7 @@ internal static class ColumnPlacer
         }
 
 
-        return new PlaceSummary(created, failed, skipped, errors, createdIds);
+        return new PlaceSummary(created, failed, skipped, errors, createdIds) { CreatedFrom = createdFrom };
     }
 
     /// <summary>Bounding box (X/Y, đã mở rộng expandMm) của các element cho trước — dùng chung cho cơ chế chống trùng.</summary>
@@ -402,4 +406,8 @@ internal sealed record CreateTypesSummary(int Created, int Failed, List<string> 
 internal sealed record PlaceSummary(
     int Created, int Failed, int Skipped,
     List<string> Errors,
-    IReadOnlyList<ElementId> CreatedIds);
+    IReadOnlyList<ElementId> CreatedIds)
+{
+    /// <summary>Cột vừa tạo kèm khung CAD sinh ra nó (để ghi tên đọc từ CAD).</summary>
+    public IReadOnlyList<(RawColumn Column, ElementId Id)> CreatedFrom { get; init; } = [];
+}
