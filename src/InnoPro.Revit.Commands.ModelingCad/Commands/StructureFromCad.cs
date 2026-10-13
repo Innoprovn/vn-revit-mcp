@@ -346,8 +346,13 @@ public sealed class PlaceStructuralWallsFromCad : RevitCommandBase
             return new { cad_id = cad.Id.Value, walls = walls.Count, tagged, tag_source = tagSource, unsupported, groups = Groups() };
 
         var typeErrors = new List<string>();
-        if (Args.GetStringOrDefault(arguments, "template_wall_type") is { Length: > 0 } templateName)
-            typeErrors.AddRange(SWall.WallPlacer.CreateMissingTypes(doc, groups, Lookup.Type<WallType>(doc, templateName)).Errors);
+        // Không chỉ định type mẫu: lấy một type tường cơ bản (ưu tiên bê tông) để tạo type đúng bề dày,
+        // thay vì dựng vách bằng type có sẵn sai bề dày.
+        var template = Args.GetStringOrDefault(arguments, "template_wall_type") is { Length: > 0 } templateName
+            ? Lookup.Type<WallType>(doc, templateName)
+            : groups.Any(g => g.ShouldModel && !g.IsExactMatch) ? DefaultWallTemplate(doc) : null;
+        if (template != null)
+            typeErrors.AddRange(SWall.WallPlacer.CreateMissingTypes(doc, groups, template).Errors);
 
         var summary = SWall.WallPlacer.Place(doc, groups, level, top, baseOffset, topOffset, Args.GetStringOrDefault(arguments, "tag_parameter"));
         return new
@@ -357,4 +362,10 @@ public sealed class PlaceStructuralWallsFromCad : RevitCommandBase
             element_ids = ArgsX.Ids(summary.CreatedIds.Take(500)),
         };
     }
+
+    private static WallType? DefaultWallTemplate(Document doc) => new FilteredElementCollector(doc).OfClass(typeof(WallType)).Cast<WallType>()
+        .Where(t => t.Kind == WallKind.Basic && t.GetCompoundStructure() != null)
+        .OrderByDescending(t => t.Name.Contains("Concrete", StringComparison.OrdinalIgnoreCase) || t.Name.Contains("Bê tông", StringComparison.OrdinalIgnoreCase))
+        .ThenByDescending(t => t.Name.Contains("Generic", StringComparison.OrdinalIgnoreCase))
+        .FirstOrDefault();
 }

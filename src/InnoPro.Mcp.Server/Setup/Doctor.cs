@@ -91,7 +91,7 @@ internal static class Doctor
                 var active = r.TryGetProperty("active_document", out var a) && a.ValueKind == JsonValueKind.String ? a.GetString() : null;
                 var errors = r.TryGetProperty("load_errors", out var le) && le.ValueKind == JsonValueKind.Array ? le.GetArrayLength() : 0;
                 if (Version.TryParse(r.GetProperty("addin_version").GetString(), out var running) && File.Exists(addinDll)
-                    && Version.TryParse(FileVersionInfo.GetVersionInfo(addinDll).FileVersion, out var installedNow) && running < installedNow)
+                    && Version.TryParse(FileVersionInfo.GetVersionInfo(addinDll).FileVersion, out var installedNow) && running < new Version(installedNow.Major, installedNow.Minor, Math.Max(installedNow.Build, 0)))
                     checks.Add(new Check($"addin_outdated_{pid}", false,
                         $"Revit PID {pid} đang chạy add-in {running.ToString(3)}, bản đã cài là {installedNow.ToString(3)}.",
                         running >= new Version(0, 7) ? "Add-in tự nạp bản mới khi Revit rảnh (vài giây); kiểm tra lại sau." : "NGƯỜI DÙNG: đóng rồi mở lại Revit một lần (từ 0.7.0 trở đi add-in tự nạp bản mới, không cần mở lại)."));

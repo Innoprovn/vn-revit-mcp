@@ -157,7 +157,7 @@ internal static class WallPlacer
 
             try
             {
-                var baseName = $"BTC-VachKC_{Math.Round(group.SizeBMm):0}";
+                var baseName = $"Vách {Math.Round(group.SizeBMm):0}mm";
                 var existingNames = choices
                     .Select(choice => choice.Symbol.Name)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);

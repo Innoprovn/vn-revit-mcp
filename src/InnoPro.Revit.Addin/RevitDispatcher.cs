@@ -9,7 +9,7 @@ namespace InnoPro.Revit.Addin;
 /// </summary>
 internal sealed class RevitDispatcher : IExternalEventHandler, IDisposable
 {
-    private sealed record WorkItem(Func<UIApplication, string> Work, TaskCompletionSource<string> Completion, CancellationToken Token);
+    private sealed record WorkItem(Func<UIApplication, string> Work, TaskCompletionSource<string> Completion, CancellationToken Token, DateTime Queued);
 
     private readonly ConcurrentQueue<WorkItem> _queue = new();
     private readonly ExternalEvent _event;
@@ -22,7 +22,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IDisposable
     public Task<string> InvokeAsync(Func<UIApplication, string> work, CancellationToken token)
     {
         var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _queue.Enqueue(new WorkItem(work, completion, token));
+        _queue.Enqueue(new WorkItem(work, completion, token, DateTime.UtcNow));
 
         var request = _event.Raise();
         if (request is not (ExternalEventRequest.Accepted or ExternalEventRequest.Pending))
@@ -54,6 +54,12 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IDisposable
     }
 
     public bool HasPending => !_queue.IsEmpty;
+
+    /// <summary>
+    /// Có việc chờ quá lâu (ExternalEvent bị kẹt, vd Revit đang nạp mô hình). Chỉ khi đó mới chạy dự phòng trong Idling:
+    /// trong sự kiện Idling Revit cấm đổi tài liệu, đổi view... nên không được giành việc của ExternalEvent.
+    /// </summary>
+    public bool HasStale => _queue.TryPeek(out var item) && DateTime.UtcNow - item.Queued > TimeSpan.FromSeconds(2);
 
     /// <summary>Đổi lõi: việc còn trong hàng đợi báo lỗi để phía gọi thử lại với lõi mới.</summary>
     public void Dispose()

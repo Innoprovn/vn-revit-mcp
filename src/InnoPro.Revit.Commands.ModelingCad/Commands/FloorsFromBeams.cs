@@ -23,6 +23,32 @@ internal static class FloorBeamHelper
 
     public static Line Flat(Line line) => Line.CreateBound(
         new XYZ(line.GetEndPoint(0).X, line.GetEndPoint(0).Y, 0), new XYZ(line.GetEndPoint(1).X, line.GetEndPoint(1).Y, 0));
+
+    /// <summary>
+    /// Dầm dựng từ CAD (hoặc vẽ tay) thường chỉ chạy từ mặt cột tới mặt cột nên tim dầm hở tại cột, không khép thành ô.
+    /// Đầu dầm nằm trong tầm một cột (≤ 700 mm tới tâm) được kéo về tâm cột trước khi dò ô.
+    /// </summary>
+    public static List<Curve> SnapToColumns(Document doc, List<Curve> curves)
+    {
+        var centers = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_StructuralColumns).WhereElementIsNotElementType()
+            .Select(e => (e.Location as LocationPoint)?.Point).OfType<XYZ>().Select(p => new XYZ(p.X, p.Y, 0)).ToList();
+        if (centers.Count == 0) return curves;
+        var reach = UnitConvert.MmToFeet(700);
+        XYZ Snap(XYZ p)
+        {
+            var flat = new XYZ(p.X, p.Y, 0);
+            var best = centers.MinBy(c => c.DistanceTo(flat))!;
+            return best.DistanceTo(flat) <= reach ? new XYZ(best.X, best.Y, p.Z) : p;
+        }
+        var result = new List<Curve>();
+        foreach (var curve in curves)
+        {
+            if (curve is not Line line) { result.Add(curve); continue; }
+            XYZ a = Snap(line.GetEndPoint(0)), b = Snap(line.GetEndPoint(1));
+            if (a.DistanceTo(b) > doc.Application.ShortCurveTolerance) result.Add(Line.CreateBound(a, b));
+        }
+        return result;
+    }
 }
 
 public sealed class CreateFloorsFromBeams : RevitCommandBase
@@ -69,7 +95,7 @@ public sealed class CreateFloorsFromBeams : RevitCommandBase
         }
         if (curves.Count == 0) throw new CommandException($"Không có dầm/vách/line đường bao nào ở tầng '{level.Name}'.");
 
-        var loops = BeamLoopScanner.TraceClosedLoops(curves);
+        var loops = BeamLoopScanner.TraceClosedLoops(FloorBeamHelper.SnapToColumns(doc, curves));
         var valid = loops.Where(l => PolygonMath.AreaAbs(PolygonMath.Tessellate(l)) >= FloorBeamHelper.MinFloorAreaSqFeet).ToList();
         if (Args.GetBoolOrDefault(arguments, "dry_run", false))
             return new { level = level.Name, loops = loops.Count, floors_to_create = valid.Count };

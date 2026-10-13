@@ -238,7 +238,7 @@ function Install-VnRevitMcp {
         Write-Host ""
         Write-Host "Đã cài vn-revit-mcp $Version cho Revit $($years -join ', ')." -ForegroundColor Green
         if ($revitRunning) {
-            Write-Host "Revit đang mở: bản mới có hiệu lực từ lần mở Revit tiếp theo." -ForegroundColor Yellow
+            Write-Host "Revit đang mở: add-in từ 0.7.0 tự nạp bản mới khi Revit rảnh; bản cũ hơn (hoặc cài lần đầu) cần mở lại Revit một lần." -ForegroundColor Yellow
         }
         Write-Host "Mở Revit → tab InnoPro."
         if (-not $NoClients) {

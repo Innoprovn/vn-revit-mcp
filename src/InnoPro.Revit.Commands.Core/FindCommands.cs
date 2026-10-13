@@ -86,9 +86,13 @@ public sealed class FindElements : RevitCommandBase
             {
                 // Phòng/vùng chưa đặt vào mô hình: nói rõ thay vì trả trống (AI dễ hiểu nhầm là thiếu dữ liệu).
                 if (e is SpatialElement { Location: null }) return "chưa đặt (Not Placed)";
-                var p = e.LookupParameter(name) ?? doc.GetElement(e.GetTypeId())?.LookupParameter(name);
-                return p == null ? null : Value(p);
+                var p = Lookup(e, name);
+                // Tên quen gọi khác tên trong Revit (dầm không có "Length" mà có "Cut Length"...): thử tên tương đương.
+                if (p == null && Aliases.TryGetValue(name, out var alternatives))
+                    p = alternatives.Select(a => Lookup(e, a)).FirstOrDefault(x => x != null);
+                return p == null ? "(không có tham số này)" : Value(p);
             }
+            Parameter? Lookup(Element e, string name) => e.LookupParameter(name) ?? doc.GetElement(e.GetTypeId())?.LookupParameter(name);
             var taken = list.Take(limit).ToList();
             return new Table
             {
@@ -104,6 +108,15 @@ public sealed class FindElements : RevitCommandBase
             _ => Table.Of(list.Select(e => ElementInfo.Summary(doc, e)), limit),
         };
     }
+
+    private static readonly Dictionary<string, string[]> Aliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Length"] = ["Cut Length", "System Length", "Unconnected Height"],
+        ["Chiều dài"] = ["Length", "Cut Length", "System Length"],
+        ["Height"] = ["Unconnected Height", "Height Offset From Level"],
+        ["Thickness"] = ["Width", "Default Thickness"],
+        ["Type Name"] = ["Type"],
+    };
 
     /// <summary>Giá trị cho AI: chiều dài mm, diện tích m², thể tích m³ (không theo đơn vị hiển thị của dự án), còn lại là chuỗi hiển thị.</summary>
     private static object? Value(Parameter p)

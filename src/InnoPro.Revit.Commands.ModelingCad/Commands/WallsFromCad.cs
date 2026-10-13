@@ -151,7 +151,7 @@ public sealed class CreateWallsFromCad : RevitCommandBase
         };
     }
 
-    private static string NewTypeName(int mm) => $"InnoPro {mm}mm";
+    private static string NewTypeName(int mm) => $"Tường {mm}mm";
 
     /// <summary>Nhân bản một Basic Wall thành type một lớp kết cấu dày <paramref name="mm"/>, giữ vật liệu lớp lõi.</summary>
     private static WallType CreateWallType(Document doc, List<WallType> basics, int mm)

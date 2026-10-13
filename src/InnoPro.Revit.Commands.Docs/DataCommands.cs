@@ -382,7 +382,9 @@ public sealed class ExportSheetsPdf : RevitCommandBase
         }
         else
         {
-            options.Combine = false;
+            // Mỗi lần xuất một sheet nhưng vẫn để Combine = true: Revit chỉ dùng FileName khi gộp,
+            // còn không gộp thì tự đặt tên theo quy tắc riêng ("Sheet-<tên>") và lệch với tên báo lại.
+            options.Combine = true;
             foreach (var sheet in sheets)
             {
                 context.CancellationToken.ThrowIfCancellationRequested();

@@ -57,7 +57,7 @@ internal sealed class App
     // Dự phòng: có lúc Revit chậm xử lý ExternalEvent (đang nạp mô hình...); lượt rảnh chạy hàng đợi.
     internal void OnIdle(UIApplication uiApp)
     {
-        if (_dispatcher.HasPending) _dispatcher.Execute(uiApp);
+        if (_dispatcher.HasStale) _dispatcher.Execute(uiApp);
     }
 
     private void OnDocumentOpened(object? sender, Autodesk.Revit.DB.Events.DocumentOpenedEventArgs e) => Interlocked.Increment(ref _openDocuments);
