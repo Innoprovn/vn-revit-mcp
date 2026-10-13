@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -141,12 +141,28 @@ internal static class Doctor
         {
             foreach (var c in checks)
             {
-                Console.WriteLine($"{(c.Ok ? "[OK] " : "[!!] ")}{c.Detail}");
-                if (c.Fix != null) Console.WriteLine($"      Cách sửa: {c.Fix}");
+                Console.WriteLine($"{(c.Ok ? "[OK] " : "[!!] ")}{ShortPaths(c.Detail)}");
+                if (c.Fix != null) Console.WriteLine($"      Cách sửa: {ShortPaths(c.Fix)}");
             }
             Console.WriteLine(ok ? "Mọi thứ sẵn sàng." : "Có mục cần sửa (xem 'Cách sửa').");
         }
         return ok ? 0 : 3;
+    }
+
+    /// <summary>Rút gọn đường dẫn trong thông báo cho người đọc: C:\Users\tên\AppData\Local\... → %LOCALAPPDATA%\...</summary>
+    internal static string ShortPaths(string text)
+    {
+        foreach (var (folder, name) in new[]
+                 {
+                     (Environment.SpecialFolder.LocalApplicationData, "%LOCALAPPDATA%"),
+                     (Environment.SpecialFolder.ApplicationData, "%APPDATA%"),
+                     (Environment.SpecialFolder.UserProfile, "%USERPROFILE%"),
+                 })
+        {
+            var path = Environment.GetFolderPath(folder);
+            if (path.Length > 3) text = text.Replace(path, name, StringComparison.OrdinalIgnoreCase);
+        }
+        return text;
     }
 
     private static string Ping(int pid)

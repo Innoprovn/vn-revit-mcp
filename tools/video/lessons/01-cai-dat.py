@@ -8,7 +8,7 @@ import recorder as R
 TITLE = "Cài đặt vn-revit-mcp cho Revit"
 PROJECT = r"C:\Users\BTC_TTTrong\Desktop\temp\khoaec\17\video\mau\Chung-cu-mau.rvt"
 REVIT = r"C:\Program Files\Autodesk\Revit 2026\Revit.exe"
-ZIP = "vn-revit-mcp-0.7.8-win-x64"
+ZIP = "vn-revit-mcp-0.7.9-win-x64"
 SENSITIVE = r"inno|^inn$|bimtech|btc|hai\.?vo|vo088|phuc|pdc"
 NAV = (0, 138, 428, 760)                 # thanh điều hướng Explorer (lộ tên ổ mạng, thư mục riêng): phủ kín
 CLICKUI = os.path.join(R.HERE, "clickui.ps1")
@@ -90,7 +90,7 @@ def run(r):
     t_con = time.time()
     r.step("Bước 4. Bấm đúp Cai-dat.cmd (hoặc chọn rồi nhấn Enter). Cửa sổ cài đặt chạy khoảng 10 đến 30 giây.", run_setup, hold=5)
     r.step("Bộ cài chép chương trình, đặt Revit luôn nạp công cụ và tự kết nối các ứng dụng AI có trên máy.", wait_setup, hold=7)
-    console = r.ocr_mask(SENSITIVE + r"|users|appdata|\\local", since=t_con)
+    console = r.ocr_mask(r"^C:|%LOCALAPPDATA%|%APPDATA%|users|appdata|\\local|" + SENSITIVE, since=t_con, row=True)
     r.step("Phần Kiểm tra ở cuối: dòng [OK] là ổn. Dòng [!!] là cần xử lý, ngay bên dưới có hướng dẫn cách sửa.", hold=8)
     r.step("Nhấn phím bất kỳ để đóng cửa sổ.", lambda: (r.press(0x20), r.wait(1)), hold=3)
     r.end_masks(console)
@@ -115,6 +115,7 @@ def run(r):
         r.pause()
         r.end_masks([m for m in around if m])
         wait_revit(after_trust=True)
+    return                                                       # phần trong Revit: 01b-trong-revit.py, ghép sau
     h = R.revit_hwnd(); R.place(h); R.focus(h); r.wait(3)
     r.resume()
     t_rv = time.time()
@@ -150,7 +151,7 @@ def run(r):
 
 def wait_setup(timeout=180):
     """Chờ bộ cài chạy xong (không còn powershell chạy Install-VnRevitMcp.ps1)."""
-    ps = "@(Get-CimInstance Win32_Process -Filter \"Name='powershell.exe'\" | Where-Object { $_.CommandLine -match 'Install-VnRevitMcp' }).Count"
+    ps = "@(Get-CimInstance Win32_Process -Filter \"Name='powershell.exe'\" | Where-Object { $_.CommandLine -match '-File .*Install-VnRevitMcp' -and $_.CommandLine -notmatch 'Get-CimInstance' }).Count"
     def running(): return subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True).stdout.strip() not in ("", "0")
     end = time.time() + 20
     while time.time() < end and not running(): time.sleep(0.5)
@@ -166,8 +167,11 @@ def wait_revit(after_trust=False, timeout=300):
         mine = revit2026_pids()
         for h, title, pid in R.windows():
             if pid not in mine: continue                         # bỏ qua Revit khác đang mở trên máy
-            if title.startswith("Security - Unsigned Add-In") and not after_trust:
-                return h
+            if title.startswith("Security - Unsigned Add-In"):
+                if R.find_all("vn-revit-mcp", h) and not after_trust:
+                    return h                                     # hộp thoại của công cụ: quay cảnh bấm Always Load
+                if not R.find_all("vn-revit-mcp", h):            # add-in khác: Load Once, không đổi thiết lập lâu dài
+                    subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", CLICKUI, "-Hwnd", str(h), "-Name", "Load Once"])
             if title == "Unresolved References":
                 subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", CLICKUI, "-Hwnd", str(h),
                                 "-Name", "Ignore and continue opening the project"])

@@ -45,6 +45,8 @@ function Install-VnRevitMcp {
     $addinFileName = "InnoPro.VnRevitMcp.addin"
 
     function Write-Step([string]$Text) { Write-Host "-> $Text" -ForegroundColor Cyan }
+# Đường dẫn cho người đọc: C:\Users\tên\AppData\Local\... -> %LOCALAPPDATA%\...
+function Get-ShortPath([string]$Path) { $Path.Replace($env:LOCALAPPDATA, "%LOCALAPPDATA%").Replace($env:APPDATA, "%APPDATA%") }
 
     # Thư mục bị khóa khi Revit hoặc AI client đang dùng DLL/exe trong đó.
     function Test-FolderInUse([string]$Path) {
@@ -143,7 +145,7 @@ function Install-VnRevitMcp {
             }
             else { Remove-Item $target -Recurse -Force }
         }
-        Write-Step "Cài phiên bản $Version vào $target"
+        Write-Step "Cài phiên bản $Version vào $(Get-ShortPath $target)"
         New-Item -ItemType Directory -Force (Join-Path $target "addin"), (Join-Path $target "server") | Out-Null
         Copy-Item (Join-Path $layout.Addin "*") (Join-Path $target "addin") -Recurse -Force
         Copy-Item (Join-Path $layout.Server "*") (Join-Path $target "server") -Recurse -Force
@@ -253,7 +255,11 @@ function Install-VnRevitMcp {
         Write-Host ""
         Write-Host "Kiểm tra (vn-revit-mcp doctor):"
         # Đầu vào rỗng: bản cũ chưa có "doctor" sẽ chạy như MCP server và thoát ngay khi hết stdin, không treo bộ cài.
+        # vn-revit-mcp.exe in UTF-8: đọc đúng tiếng Việt (mặc định PowerShell 5.1 đọc theo code page OEM, ra chữ lỗi).
+        $oldEncoding = [Console]::OutputEncoding
+        try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
         try { "" | & $exe doctor | ForEach-Object { Write-Host "  $_" } } catch { Write-Warning "Không chạy được doctor: $($_.Exception.Message)" }
+        finally { try { [Console]::OutputEncoding = $oldEncoding } catch { } }
     }
     finally {
         Remove-Item $temp -Recurse -Force -ErrorAction SilentlyContinue

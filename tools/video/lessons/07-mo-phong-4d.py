@@ -24,9 +24,13 @@ def prepare(r):
     r.click(1902, 218); time.sleep(0.8)                         # nút + của khung chat: xoá hội thoại cũ
     # Tìm sẵn vị trí (UIA chậm) và vùng che khi chưa quay.
     r.tab = [b for b in R.find_all(r"^InnoPro$", h) if b[1] < 60][0]
-    r.click(*center(r.tab)); time.sleep(1.2)
-    r.shop_btn = R.element_rect("Cửa hàng", h)
+    r.shop_btn = None
+    for _ in range(4):                                          # cú bấm đầu có thể chỉ kích hoạt cửa sổ
+        r.click(*center(r.tab)); time.sleep(1.5)
+        r.shop_btn = R.element_rect("Cửa hàng", h)
+        if r.shop_btn: break
     r.mask_names(r"^(InnoPro|BIMTech)$", h)
+    r.mask(1604, 4, 92, 24)                                     # tên tài khoản Autodesk (OCR không bắt được)
     r.ocr_mask(SENSITIVE)
     r.click_name("Architecture", h); time.sleep(0.5)
     r.move(900, 500); r.clicks.clear()

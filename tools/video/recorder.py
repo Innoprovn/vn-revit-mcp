@@ -311,12 +311,13 @@ class Recorder:
         """Che mọi phần tử giao diện có tên khớp regex (nhãn tab, tiêu đề khung...)."""
         return [self.mask(*rect, **kw) for rect in find_all(pattern, hwnd) if rect[2] < 600 and rect[3] <= 30]
 
-    def ocr_mask(self, pattern, since=None, until=None, pad=4):
-        """Chụp màn hình lúc này, OCR, che mọi từ khớp regex (không phân biệt hoa thường)."""
+    def ocr_mask(self, pattern, since=None, until=None, pad=4, row=False):
+        """Chụp màn hình lúc này, OCR, che mọi từ khớp regex (không phân biệt hoa thường).
+        row=True: che từ chữ đó tới hết dòng (OCR thường không đọc được đường dẫn dài phía sau "C:")."""
         import re
         png = self.out + ".ocr.png"
         screen_png(png, self.region)
-        found = [self.mask(x + self.region[0], y + self.region[1], w, h, pad=pad, since=since, until=until)
+        found = [self.mask(x + self.region[0], y + self.region[1], (self.region[2] - x) if row else w, h, pad=pad, since=since, until=until)
                  for x, y, w, h, text in ocr(png) if re.search(pattern, text, re.I)]
         os.remove(png)
         return [m for m in found if m]
