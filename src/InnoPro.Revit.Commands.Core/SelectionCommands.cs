@@ -77,7 +77,13 @@ public sealed class OpenView : RevitCommandBase
         else throw new CommandException("Truyền view, view_id hoặc level.");
 
         if (target == null) throw new CommandException("Không tìm thấy view. Gọi list_views để xem tên đúng.");
-        context.UIDocument.ActiveView = target;
+        try { context.UIDocument.ActiveView = target; }
+        catch (Autodesk.Revit.Exceptions.InvalidOperationException)
+        {
+            // "Setting active view is temporarily disabled" (đang trong ExternalEvent): nhờ Revit đổi view ngay sau lượt này.
+            context.UIDocument.RequestViewChange(target);
+            return new { view_id = target.Id.Value, name = target.Name, view_type = target.ViewType.ToString(), note = "Revit chuyển view ngay sau lượt này." };
+        }
         return new { view_id = target.Id.Value, name = target.Name, view_type = target.ViewType.ToString() };
     }
 }
