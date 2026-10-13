@@ -3,7 +3,7 @@
 **Cho AI làm việc với Autodesk Revit.** Mã nguồn mở, miễn phí, do [InnoPro](https://innopro.vn) phát triển.
 
 - **Một lệnh cài**, tự kết nối mọi AI trên máy: Claude, Cursor, VS Code Copilot, Gemini CLI, Codex, LM Studio...
-- **Chat ngay trong Revit** với Claude, OpenAI, Gemini, DeepSeek, Qwen, Kimi, GLM..., hoặc AI chạy trên máy; dùng được cả gói Claude Pro/Max.
+- **Chat ngay trong Revit** với Claude, OpenAI, Gemini, DeepSeek, Qwen, Kimi, GLM..., hoặc AI chạy trên máy; dùng được tài khoản Claude, kể cả gói Free, qua Claude Desktop.
 - **Mỗi lệnh dùng được hai cách:** người bấm nút trên tab **InnoPro** (form nhập tự sinh), hoặc AI gọi.
 - **Viết lệnh mới bằng một file `.cs`**, không cần build: thả vào thư mục, bấm *Nạp lại lệnh*. Hoặc nhờ AI viết.
 - **Tiết kiệm token:** AI chỉ thấy vài lệnh hay dùng, tra thêm khi cần; kết quả trả dạng bảng gọn.
@@ -38,7 +38,7 @@ rồi bấm đúp (hoặc Claude Desktop → Settings → Extensions → Install
 Xong: mở Revit, tab **InnoPro**. Dùng theo một trong ba cách:
 - **Chat trong Revit:** bấm **Chat AI**, chọn nhà cung cấp, nhập API key. Có Claude, OpenAI, Gemini, DeepSeek, Qwen, Kimi,
   GLM, MiniMax, OpenRouter, hoặc AI chạy trên máy (Ollama, LM Studio) không cần key.
-- **Gói Claude Pro/Max:** trong khung chat chọn *Claude (gói Pro/Max)* → *Kết nối và mở Claude*.
+- **Tài khoản Claude (Free, Pro, Max):** trong khung chat chọn *Claude Desktop (Free/Pro/Max)* → *Kết nối và mở Claude*. Gói Free có hạn mức thấp, đủ để thử.
 - **AI bên ngoài** (Claude Desktop, Cursor, VS Code...): đã tự kết nối khi cài; khởi động lại ứng dụng AI rồi hỏi.
 
 Hướng dẫn chi tiết: [docs/huong-dan-su-dung.md](docs/huong-dan-su-dung.md). Dựng hình từ CAD: [docs/dung-hinh-tu-cad.md](docs/dung-hinh-tu-cad.md).

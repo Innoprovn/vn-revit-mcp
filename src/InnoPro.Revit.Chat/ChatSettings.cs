@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -20,7 +20,7 @@ internal static class ProviderPresets
     // Hint: một dòng ngắn, chỉ nói lấy key ở đâu.
     public static readonly IReadOnlyList<ProviderPreset> All =
     [
-        new("claude-desktop", "Claude (gói Pro/Max)", "desktop", "", false, "", "Dùng gói Claude qua ứng dụng Claude Desktop"),
+        new("claude-desktop", "Claude Desktop (Free/Pro/Max)", "desktop", "", false, "", "Dùng tài khoản Claude (kể cả Free) qua ứng dụng Claude Desktop"),
         new("anthropic", "Claude API", "anthropic", "", true, "claude-opus-5-5", "Key: console.anthropic.com"),
         new("openai", "OpenAI", "openai", "https://api.openai.com/v1", true, "", "Key: platform.openai.com"),
         new("gemini", "Google Gemini", "openai", "https://generativelanguage.googleapis.com/v1beta/openai", true, "", "Key: aistudio.google.com"),

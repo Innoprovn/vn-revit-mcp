@@ -112,10 +112,10 @@ internal sealed class ChatView : UserControl
         return root;
     }
 
-    /// <summary>Gói thuê bao (Claude Pro/Max): không gọi API, chỉ nối Claude Desktop với Revit qua MCP rồi mở ứng dụng.</summary>
+    /// <summary>Tài khoản Claude (Free/Pro/Max): không gọi API, chỉ nối Claude Desktop với Revit qua MCP rồi mở ứng dụng.</summary>
     private void BuildDesktopCard()
     {
-        _desktopCard.Children.Add(new TextBlock { Text = "Claude Pro/Max", FontSize = 15, FontWeight = FontWeights.SemiBold });
+        _desktopCard.Children.Add(new TextBlock { Text = "Claude Desktop", FontSize = 15, FontWeight = FontWeights.SemiBold });
         _desktopCard.Children.Add(new TextBlock
         {
             Text = "Hỏi trong Claude Desktop, Claude tự làm việc với Revit.",
