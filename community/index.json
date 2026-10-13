@@ -41,9 +41,9 @@
                            "description":  "Tiến độ gắn phần tử, Gantt, chạy mô phỏng theo ngày ngay trong Revit; AI tự sinh tiến độ và hiển thị mô hình tại một ngày.",
                            "category":  "Mô phỏng",
                            "author":  "InnoPro",
-                           "version":  "1.0.4",
-                           "url":  "https://github.com/Innoprovn/vn-revit-mcp/releases/download/ext-sim4d-v1.0.4/sim4d-1.0.4.zip",
-                           "sha256":  "8baeed6c8d965e1b32c9cbc126a4230dfc9f6d1083a8a84659aa3efbe9a13933",
+                           "version":  "1.0.5",
+                           "url":  "https://github.com/Innoprovn/vn-revit-mcp/releases/download/ext-sim4d-v1.0.5/sim4d-1.0.5.zip",
+                           "sha256":  "531b64414180f054bd6a19e97393b36e0bf7122623b50cf3c9cf252abd04dbc0",
                            "size_kb":  46,
                            "commands":  [
                                             "sim4d_open",
