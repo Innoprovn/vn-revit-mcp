@@ -142,3 +142,14 @@ try {
 }
 finally { $archive.Dispose() }
 Write-Host "Đã đóng gói: $mcpb ($([math]::Round((Get-Item $mcpb).Length / 1MB, 1)) MB)" -ForegroundColor Green
+
+# ---- server.json cho MCP Registry: đồng bộ version, link và SHA-256 của gói .mcpb ----
+# Workflow publish-mcp-registry.yml đăng file này khi bản phát hành được tạo, nên commit nó trước khi tạo release.
+$serverJsonPath = Join-Path $root "server.json"
+$serverJson = Get-Content $serverJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$serverJson.version = $version
+$package = $serverJson.packages | Where-Object { $_.registryType -eq "mcpb" } | Select-Object -First 1
+$package.identifier = "https://github.com/Innoprovn/vn-revit-mcp/releases/download/v$version/vn-revit-mcp-$version.mcpb"
+$package.fileSha256 = (Get-FileHash $mcpb -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText($serverJsonPath, ($serverJson | ConvertTo-Json -Depth 8), $ascii)
+Write-Host "server.json: $version, sha256 $($package.fileSha256.Substring(0, 12))..." -ForegroundColor Green
