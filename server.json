@@ -7,12 +7,12 @@
                        "url":  "https://github.com/Innoprovn/vn-revit-mcp",
                        "source":  "github"
                    },
-    "version":  "0.7.6",
+    "version":  "0.7.7",
     "packages":  [
                      {
                          "registryType":  "mcpb",
-                         "identifier":  "https://github.com/Innoprovn/vn-revit-mcp/releases/download/v0.7.6/vn-revit-mcp-0.7.6.mcpb",
-                         "fileSha256":  "573e7a2f602c784742e8db9b249f720c0f033fb4d9d5d1c468ce53837f663b07",
+                         "identifier":  "https://github.com/Innoprovn/vn-revit-mcp/releases/download/v0.7.7/vn-revit-mcp-0.7.7.mcpb",
+                         "fileSha256":  "918e0ea79d6978f0c9af2bdf4265e5420a5e291adfe1639d8589c50785feb2ce",
                          "transport":  {
                                            "type":  "stdio"
                                        }
