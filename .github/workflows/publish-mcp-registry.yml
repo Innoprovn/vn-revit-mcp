@@ -13,6 +13,8 @@ permissions:
 
 jobs:
   publish:
+    # Chỉ bản phát hành vn-revit-mcp (tag v*), không chạy với release tiện ích (ext-*).
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
