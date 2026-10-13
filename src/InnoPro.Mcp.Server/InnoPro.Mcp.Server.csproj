@@ -23,6 +23,7 @@
   <ItemGroup>
     <!-- Công thức quy trình (MCP prompts): file Markdown, ai cũng đóng góp được. -->
     <None Update="recipes\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="knowledge\*.gz" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="skills\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

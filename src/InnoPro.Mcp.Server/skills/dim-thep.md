@@ -22,3 +22,7 @@ tự cập nhật khi thép đổi. NewDimension với reference lấy từ hìn
 MultiReferenceAnnotationOptions(type): SetElementsToDimension([rebarId]), DimensionStyleType=Linear,
 DimensionLineDirection = phương rải chiếu lên mặt view, DimensionPlaneNormal = view.ViewDirection, DimensionLineOrigin;
 kiểm AreReferencesValidForLinearDimension rồi MultiReferenceAnnotation.Create(doc, viewId, options).
+
+## Nguồn
+- Revit API: MultiReferenceAnnotation, MultiReferenceAnnotationOptions (tra revit_api).
+- The Building Coder 1021 "MultiReferenceAnnotation Example"; 1684 (các cách dim thép qua reference hình học và nhược điểm).

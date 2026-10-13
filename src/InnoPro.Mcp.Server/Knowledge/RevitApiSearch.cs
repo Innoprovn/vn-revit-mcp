@@ -12,6 +12,11 @@ public sealed partial class RevitApiSearch
 {
     private sealed record Item(char Kind, string Id, string Type, string Member, string Signature, string Years, string Doc);
 
+    /// <summary>Bài blog The Building Coder (MIT): số, tiêu đề, link, tên API nhắc tới.</summary>
+    private sealed record Post(string Number, string Title, string Url, HashSet<string> Names);
+
+    private static readonly Lazy<(List<Post> Posts, Dictionary<string, double> Idf)> Community = new(LoadCommunity);
+
     private readonly SemaphoreSlim _gate = new(1, 1);
     private List<Item>? _items;
 
@@ -58,6 +63,42 @@ public sealed partial class RevitApiSearch
             return _items = Read(file);
         }
         finally { _gate.Release(); }
+    }
+
+    private static (List<Post>, Dictionary<string, double>) LoadCommunity()
+    {
+        var file = Path.Combine(AppContext.BaseDirectory, "knowledge", "tbc-index.tsv.gz");
+        var posts = new List<Post>();
+        if (File.Exists(file))
+        {
+            using var reader = new StreamReader(new GZipStream(File.OpenRead(file), CompressionMode.Decompress), Encoding.UTF8);
+            while (reader.ReadLine() is { } line)
+            {
+                var f = line.Split('\t');
+                if (f.Length >= 4) posts.Add(new Post(f[0], f[1], f[2], f[3].Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet()));
+            }
+        }
+        // Tên API càng hiếm trong blog thì càng nói lên chủ đề bài (Element, Document xuất hiện khắp nơi).
+        var idf = posts.SelectMany(p => p.Names).GroupBy(n => n).ToDictionary(g => g.Key, g => Math.Log((double)posts.Count / g.Count()));
+        return (posts, idf);
+    }
+
+    /// <summary>Tối đa 3 bài cộng đồng liên quan nhất tới các tên API và từ khóa.</summary>
+    private static string Related(IEnumerable<string> apiNames, IReadOnlyList<string> terms)
+    {
+        var (posts, idf) = Community.Value;
+        if (posts.Count == 0) return "";
+        var names = apiNames.Where(n => n.Length > 0).Distinct().ToList();
+        var top = posts
+            .Select(p => (Post: p, Score: names.Where(p.Names.Contains).Sum(n => idf.GetValueOrDefault(n)) * (names.Count(p.Names.Contains) > 1 ? 1.5 : 1)
+                                         + terms.Count(t => p.Title.Contains(t, StringComparison.OrdinalIgnoreCase)) * 2))
+            .Where(x => x.Score >= 4)
+            .OrderByDescending(x => x.Score)
+            .Take(3)
+            .ToList();
+        if (top.Count == 0) return "";
+        return "\nBài cộng đồng liên quan (The Building Coder, đọc bằng web nếu cần):\n"
+               + string.Join("\n", top.Select(x => $"- {x.Post.Number}: {x.Post.Title} — {x.Post.Url}"));
     }
 
     private static List<Item> Read(string file)
@@ -123,6 +164,7 @@ public sealed partial class RevitApiSearch
         var top = scored.OrderByDescending(s => s.Score).ThenBy(s => s.Item.Id.Length).Take(limit).ToList();
         var sb = new StringBuilder($"{scored.Count} mục khớp, hiện {top.Count}. Dòng: loại | id | chữ ký [năm] | mô tả\n");
         foreach (var (it, _) in top) sb.Append(Line(it, 220)).Append('\n');
+        sb.Append(Related(top.Take(5).SelectMany(t => new[] { ShortType(t.Item.Type), t.Item.Member }), terms));
         return sb.ToString().TrimEnd();
     }
 
@@ -144,6 +186,7 @@ public sealed partial class RevitApiSearch
                 sb.Append($"{m.Kind} {m.Signature}{(m.Years.Contains(',') ? "" : $" [{m.Years}]")}\n");
             if (members.Count > 150) sb.Append($"…(+{members.Count - 150})\n");
         }
+        sb.Append(Related([ShortType(it.Type), it.Member, it.Kind == 'T' ? ShortType(it.Id) : ""], filter == null ? [] : [filter]));
         return sb.ToString().TrimEnd();
     }
 
