@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using InnoPro.Bridge;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -16,6 +16,8 @@ public sealed class RevitTools(RevitBridgeClient bridge)
 {
     private const string StatusTool = "revit_status";
     private const string ReloadTool = "reload_commands";
+
+    private static readonly Knowledge.RevitApiSearch ApiSearch = new();
 
     private static readonly bool ExposeAll =
         string.Equals(Environment.GetEnvironmentVariable("VN_REVIT_MCP_TOOLS"), "all", StringComparison.OrdinalIgnoreCase);
@@ -49,6 +51,8 @@ public sealed class RevitTools(RevitBridgeClient bridge)
             },
         };
 
+        tools.Add(new Tool { Name = Knowledge.RevitApiSearch.ToolName, Description = Knowledge.RevitApiSearch.Description, InputSchema = Knowledge.RevitApiSearch.Schema });
+
         if (hidden.Count > 0)
         {
             tools.Add(new Tool { Name = CommandCatalog.FindTool, Description = CommandCatalog.FindDescription(hidden), InputSchema = CommandCatalog.FindSchema });
@@ -77,6 +81,9 @@ public sealed class RevitTools(RevitBridgeClient bridge)
                     var reloaded = await bridge.SendAsync(BridgeProtocol.MethodReloadCommands, null, InvokeTimeout, token);
                     await server.SendNotificationAsync(NotificationMethods.ToolListChangedNotification, token);
                     return Json(reloaded);
+                case Knowledge.RevitApiSearch.ToolName:
+                    var limit = arguments != null && arguments.TryGetValue("limit", out var l) && l.ValueKind == JsonValueKind.Number ? l.GetInt32() : 15;
+                    return Text(await ApiSearch.RunAsync(Arg(arguments, "query"), Arg(arguments, "id"), Arg(arguments, "kind"), limit, token), false);
                 case CommandCatalog.FindTool:
                     return Text(CommandCatalog.Find(await LoadCommandsAsync(token), Arg(arguments, "query"), Arg(arguments, "name")), false);
                 case CommandCatalog.RunTool:
