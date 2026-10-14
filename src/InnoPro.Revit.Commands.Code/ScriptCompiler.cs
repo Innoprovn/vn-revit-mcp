@@ -42,15 +42,31 @@ internal static class ScriptCompiler
         """;
 
     private static readonly Lazy<IReadOnlyList<MetadataReference>> References = new(LoadReferences);
+    private static readonly Dictionary<string, MetadataReference?> LoadedCache = new(StringComparer.OrdinalIgnoreCase);
+
+    // "using X.Y;" hoặc "using A = X.Y;" ở đầu mã; không bắt "using (" hay "using var".
+    private static readonly System.Text.RegularExpressions.Regex UsingLine =
+        new(@"^\s*using\s+(static\s+)?(\w+\s*=\s*)?[\w.]+(<[\w.,\s]+>)?\s*;\s*$");
 
     public static (ScriptEntry Entry, AssemblyLoadContext Context) Compile(string code)
     {
-        var tree = CSharpSyntaxTree.ParseText(Prefix + "\n" + code + Suffix,
+        // Dòng using ở đầu mã chuyển lên đầu file; giữ dòng trống để số dòng báo lỗi không lệch.
+        var lines = code.Replace("\r\n", "\n").Split('\n');
+        var usings = new System.Text.StringBuilder();
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i]) || lines[i].TrimStart().StartsWith("//")) continue;
+            if (!UsingLine.IsMatch(lines[i])) break;
+            usings.Append("#line ").Append(i + 1).Append('\n').Append(lines[i].Trim()).Append('\n');
+            lines[i] = "";
+        }
+
+        var tree = CSharpSyntaxTree.ParseText(usings + "#line default\n" + Prefix + "\n" + string.Join("\n", lines) + Suffix,
             new CSharpParseOptions(LanguageVersion.Latest));
         var compilation = CSharpCompilation.Create(
             "InnoProScript_" + Guid.NewGuid().ToString("N"),
             [tree],
-            References.Value,
+            References.Value.Concat(LoadedReferences()),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
                 optimizationLevel: OptimizationLevel.Release,
                 nullableContextOptions: NullableContextOptions.Disable));
@@ -108,5 +124,34 @@ internal static class ScriptCompiler
             catch (BadImageFormatException) { } // DLL native trong thư mục runtime
         }
         return references;
+    }
+
+    /// <summary>
+    /// Mọi thư viện đang nạp trong Revit (WPF, IFC, add-in khác...) để mã AI dùng được, không chỉ System và Revit API.
+    /// Trùng tên thì lấy bản nạp trước, tránh lỗi tham chiếu hai phiên bản.
+    /// </summary>
+    private static IEnumerable<MetadataReference> LoadedReferences()
+    {
+        var core = new HashSet<string>(References.Value.OfType<PortableExecutableReference>()
+            .Select(r => Path.GetFileNameWithoutExtension(r.FilePath ?? "")), StringComparer.OrdinalIgnoreCase);
+        var result = new List<MetadataReference>();
+        lock (LoadedCache)
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly.IsDynamic) continue;
+                string path;
+                try { path = assembly.Location; } catch (NotSupportedException) { continue; }
+                if (string.IsNullOrEmpty(path) || !core.Add(Path.GetFileNameWithoutExtension(path))) continue;
+                if (!LoadedCache.TryGetValue(path, out var reference))
+                {
+                    try { reference = MetadataReference.CreateFromFile(path); }
+                    catch (Exception e) when (e is BadImageFormatException or IOException) { reference = null; }
+                    LoadedCache[path] = reference;
+                }
+                if (reference != null) result.Add(reference);
+            }
+        }
+        return result;
     }
 }

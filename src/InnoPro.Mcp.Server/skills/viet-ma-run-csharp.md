@@ -7,6 +7,7 @@ verified: Revit 2025/2026, 13/10/2026
 ## Cách làm
 1. Tra API trước: revit_api query="..." (có ghi năm có mặt 2025/2026); xem lớp kèm lọc: revit_api id="Autodesk.Revit.DB.X" query="từ khóa".
 2. Thân mã nhận sẵn: doc, uidoc, uiapp, print(object). return giá trị sẽ thành kết quả.
+   Cần namespace khác thì viết 'using X;' ở đầu mã; mọi thư viện đang nạp trong Revit đều dùng được.
 3. mode=read (mặc định) chạy rồi hoàn tác; mode=write chạy thẳng, giữ thay đổi (Undo được); summary là tên bước Undo.
 4. Đơn vị nội bộ là feet: mm / 304.8. UnitUtils.ConvertFromInternalUnits để đổi.
 

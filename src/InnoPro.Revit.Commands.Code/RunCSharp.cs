@@ -17,6 +17,7 @@ public sealed class RunCSharp : RevitCommandBase
         Chạy đoạn mã C# (Revit API) trong Revit khi không có lệnh chuyên dụng phù hợp.
         Mã là THÂN một phương thức, có sẵn biến: doc (Document), uidoc (UIDocument), uiapp (UIApplication), print(object) để in.
         Đã có using: System, System.Linq, System.Collections.Generic, System.Text, Autodesk.Revit.DB (+ .Architecture, .Structure), Autodesk.Revit.UI.
+        Cần thêm thì viết dòng 'using X;' ở đầu mã; dùng được mọi thư viện đang nạp trong Revit (WPF, IFC, add-in khác...).
         Dùng 'return <giá trị>;' để trả kết quả (Element và danh sách Element được tóm tắt tự động).
         KHÔNG tự tạo Transaction: host đã mở sẵn.
         mode="read" (mặc định): mọi thay đổi bị hủy sau khi chạy, an toàn để khảo sát.
