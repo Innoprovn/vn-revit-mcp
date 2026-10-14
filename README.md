@@ -65,7 +65,7 @@ Mở nhiều Revit cùng lúc: AI tự làm việc với Revit bạn thao tác g
 | Rebar | thống kê kiểu BBS, chọn nhanh, ngắt/gắn host, dịch thép, tránh va chạm, QA thép, so sánh thay đổi, thư viện hình dạng |
 | Bản vẽ | tạo sheet, đặt view, nhân bản view, gán template, tag tự động, dim trục, xuất PDF |
 | Dữ liệu | đọc/xuất schedule, khối lượng vật liệu, chiều dài tường, danh sách sheet, tìm phần tử trong link |
-| Nâng cao | `run_csharp`: AI chạy mã C#; mặc định chỉ đọc, sửa mô hình phải được duyệt |
+| Nâng cao | `run_csharp`: AI chạy mã C#; mặc định chỉ đọc; mode=write sửa mô hình ngay, Undo được |
 
 Ribbon gọn: vài nút nhỏ mỗi nhóm, mọi lệnh khác trong menu **Tất cả**. Thêm lệnh từ **Cửa hàng** (cộng đồng đóng góp).
 

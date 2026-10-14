@@ -4,7 +4,6 @@ using System.Text.Json;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using InnoPro.Revit.Sdk;
-using InnoPro.Ui;
 
 namespace InnoPro.Revit.Commands.Code;
 
@@ -21,7 +20,7 @@ public sealed class RunCSharp : RevitCommandBase
         Dùng 'return <giá trị>;' để trả kết quả (Element và danh sách Element được tóm tắt tự động).
         KHÔNG tự tạo Transaction: host đã mở sẵn.
         mode="read" (mặc định): mọi thay đổi bị hủy sau khi chạy, an toàn để khảo sát.
-        mode="write": giữ thay đổi, Revit sẽ hỏi người dùng duyệt trước khi chạy; nhớ mô tả ngắn việc mã làm trong 'summary'.
+        mode="write": giữ thay đổi, chạy ngay không cần duyệt; 'summary' (nên có) là tên bước trong Undo của Revit.
         Revit lưu chiều dài bằng feet (1 ft = 304.8 mm).
         """;
     public override string InputSchema => """
@@ -30,7 +29,7 @@ public sealed class RunCSharp : RevitCommandBase
           "properties": {
             "code": { "type": "string", "description": "Thân phương thức C#." },
             "mode": { "type": "string", "enum": ["read", "write"], "description": "Mặc định read." },
-            "summary": { "type": "string", "description": "Mô tả ngắn cho người dùng biết mã sẽ làm gì (bắt buộc khi mode=write)." }
+            "summary": { "type": "string", "description": "Mô tả ngắn việc mã làm, hiện trong Undo của Revit." }
           },
           "required": ["code"]
         }
@@ -47,16 +46,11 @@ public sealed class RunCSharp : RevitCommandBase
             var other => throw new CommandException($"mode '{other}' không hợp lệ, dùng read hoặc write."),
         };
         var summary = Args.GetStringOrDefault(arguments, "summary");
-        if (write && string.IsNullOrWhiteSpace(summary))
-            throw new CommandException("mode=write cần 'summary' mô tả việc mã sẽ làm để người dùng duyệt.");
 
         var (entry, loadContext) = ScriptCompiler.Compile(code);
         try
         {
-            if (write && !Confirm(context, summary!, code))
-                throw new CommandException("Người dùng đã từ chối chạy mã sửa mô hình.");
-
-            return Run(context, entry, write);
+            return Run(context, entry, write, summary);
         }
         finally
         {
@@ -64,7 +58,7 @@ public sealed class RunCSharp : RevitCommandBase
         }
     }
 
-    private static object Run(RevitCommandContext context, ScriptEntry entry, bool write)
+    private static object Run(RevitCommandContext context, ScriptEntry entry, bool write, string? summary)
     {
         var doc = context.Document;
         var output = new List<string>();
@@ -73,7 +67,8 @@ public sealed class RunCSharp : RevitCommandBase
             if (output.Count < MaxItems) output.Add(value?.ToString() ?? "null");
         }
 
-        using var transaction = new Transaction(doc, "InnoPro: run_csharp");
+        // summary làm tên bước trong Undo để người dùng biết hoàn tác cái gì.
+        using var transaction = new Transaction(doc, string.IsNullOrWhiteSpace(summary) ? "InnoPro: run_csharp" : "InnoPro: " + summary.Trim());
         TransactionHelper.SuppressWarnings(transaction);
         transaction.Start();
         object? result;
@@ -103,27 +98,7 @@ public sealed class RunCSharp : RevitCommandBase
         return new { status, result = Simplify(result, depth: 0), output };
     }
 
-    private static bool Confirm(RevitCommandContext context, string summary, string code)
-    {
-        var window = new InnoWindow("AI muốn sửa mô hình", context.UIApplication.MainWindowHandle, width: 640);
-        var panel = new System.Windows.Controls.DockPanel { Margin = new System.Windows.Thickness(16, 12, 16, 0) };
-        var text = new System.Windows.Controls.TextBlock { Text = summary + "\nCó thể Undo sau khi chạy.", TextWrapping = System.Windows.TextWrapping.Wrap, Margin = new System.Windows.Thickness(0, 0, 0, 8) };
-        System.Windows.Controls.DockPanel.SetDock(text, System.Windows.Controls.Dock.Top);
-        panel.Children.Add(text);
-        panel.Children.Add(new System.Windows.Controls.TextBox
-        {
-            Text = code.Length > 6000 ? code[..6000] + "\n…" : code,
-            IsReadOnly = true, MaxHeight = 320, FontFamily = new System.Windows.Media.FontFamily("Consolas"),
-            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
-        });
-        window.Body = panel;
-        var accepted = false;
-        window.AddButton("Không", closes: true);
-        window.AddButton("Cho chạy", primary: true, onClick: () => accepted = true, closes: true);
-        window.ShowDialog();
-        return accepted;
-    }
+
     /// <summary>Biến kết quả thành dạng JSON an toàn: Element thì tóm tắt, danh sách thì giới hạn.</summary>
     private static object? Simplify(object? value, int depth)
     {
